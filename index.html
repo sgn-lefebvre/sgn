@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SGN · M. Lefebvre</title>
+  <meta name="description" content="Révisions de sciences de gestion et numérique en 1re STMG : synthèses, cartes de définitions, QCM et situations.">
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23F09080'/%3E%3Ctext x='32' y='43' font-family='Arial,sans-serif' font-size='26' font-weight='700' text-anchor='middle' fill='%2315231E'%3ESGN%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="assets/style.css">
+  <script>
+    /* Applique le thème clair ou sombre avant l'affichage, pour éviter un flash. */
+    (function () {
+      var t = null;
+      try { t = localStorage.getItem("sgn-theme"); } catch (e) {}
+      if (!t && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) { t = "dark"; }
+      document.documentElement.setAttribute("data-theme", t === "dark" ? "dark" : "light");
+    })();
+  </script>
+</head>
+<body>
+  <a class="skip" href="#app">Aller au contenu</a>
+
+  <header class="top">
+    <div class="wrap top-in">
+      <a class="logo" href="#/" aria-label="SGN, M. Lefebvre : retour à l’accueil">
+        <span class="logo-name">SGN</span>
+        <span class="logo-badge">M. Lefebvre</span>
+      </a>
+      <nav class="nav" aria-label="Navigation principale">
+        <a href="#/" data-nav="accueil">Accueil</a>
+        <a href="#/chapitres" data-nav="chapitres">Chapitres</a>
+        <a href="#/revision" data-nav="revision" hidden>Révision</a>
+      </nav>
+      <button class="theme-btn" id="theme-btn" type="button" aria-label="Passer en mode sombre">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3a9 9 0 0 0 0 18z" fill="currentColor"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <main id="app" class="wrap" tabindex="-1">
+    <noscript>
+      <p class="lead">Ce site a besoin de JavaScript pour fonctionner. Active-le dans les réglages de ton navigateur, puis recharge la page.</p>
+    </noscript>
+  </main>
+
+  <footer class="foot">
+    <div class="wrap">
+      <p><strong>SGN · M. Lefebvre.</strong> Révisions de sciences de gestion et numérique en 1re STMG. Ta progression est enregistrée sur cet appareil, et nulle part ailleurs.</p>
+      <p><button class="link-btn" id="reset-btn" type="button">Effacer ma progression sur cet appareil</button></p>
+    </div>
+  </footer>
+
+  <!-- Données : un fichier par chapitre. Pour ouvrir un chapitre, ajouter sa ligne ici. -->
+  <script src="data/config.js"></script>
+  <script src="data/ch01.js"></script>
+  <script src="data/ch02.js"></script>
+  <script src="data/ch03.js"></script>
+  <script src="data/ch04.js"></script>
+  <script src="assets/app.js"></script>
+</body>
+</html>
