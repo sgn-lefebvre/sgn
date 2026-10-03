@@ -233,31 +233,52 @@
     opts = opts || {};
     var fin = opts.fin;
     var ordre = melanger(items), pos = 0, sues = 0, aRevoir = [];
+    var COULEURS = ["coral", "sun", "teal"];
+    var mouvement = !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     function carte() {
       vider(cont);
       if (pos >= ordre.length) { bilan(); return; }
-      var it = ordre[pos], c = chapitre(it.ch), k = c.cartes[it.i], retournee = false;
-      var face = el("button", { class: "flash", type: "button", "aria-live": "polite" });
-      var boutons = el("div", { class: "two-btn" });
-      function dessiner() {
-        vider(face);
-        face.className = "flash" + (retournee ? " back" : "");
-        face.appendChild(el("span", { class: "flash-side", text: retournee ? "Définition" : "Terme" }));
-        face.appendChild(el("span", { class: "flash-term", text: k.terme }));
-        if (retournee) { face.appendChild(el("span", { class: "flash-def", text: k.def })); }
-        else { face.appendChild(el("span", { class: "flash-hint", text: "Devine la définition, puis touche la carte pour la retourner." })); }
-        vider(boutons);
-        if (retournee) {
-          boutons.appendChild(el("button", { class: "btn", type: "button", text: "À revoir", onclick: function () { retire(prog(it.ch).cartes, it.i); sauver(); aRevoir.push(it); pos++; carte(); } }));
-          boutons.appendChild(el("button", { class: "btn btn-dark", type: "button", text: "Je la sais", onclick: function () { ajoute(prog(it.ch).cartes, it.i); sauver(); sues++; pos++; carte(); } }));
-        }
+      var it = ordre[pos], c = chapitre(it.ch), k = c.cartes[it.i], retournee = false, repondu = false;
+      var recto = el("span", { class: "flash-face flash-front" },
+        el("span", { class: "flash-corner", text: "Chapitre " + c.id }),
+        el("span", { class: "flash-side", text: "Terme" }),
+        el("span", { class: "flash-term", text: k.terme }),
+        el("span", { class: "flash-hint", text: "Devine la définition, puis touche la carte pour la retourner." }));
+      var verso = el("span", { class: "flash-face flash-back", "aria-hidden": "true" },
+        el("span", { class: "flash-corner", text: "Chapitre " + c.id }),
+        el("span", { class: "flash-side", text: "Définition" }),
+        el("span", { class: "flash-term small", text: k.terme }),
+        el("span", { class: "flash-def", text: k.def }));
+      var face = el("button", { class: "flash", type: "button", "aria-pressed": "false" }, el("span", { class: "flash-inner" }, recto, verso));
+      var annonce = el("p", { class: "sr-only", "aria-live": "polite" });
+      var reste = ordre.length - pos - 1;
+      var pile = el("div", { class: "flash-stack c-" + COULEURS[it.i % 3] + (reste > 0 ? " has-more" : "") }, face);
+      function repondre(su) {
+        if (repondu) { return; }
+        repondu = true;
+        if (su) { ajoute(prog(it.ch).cartes, it.i); sues++; } else { retire(prog(it.ch).cartes, it.i); aRevoir.push(it); }
+        sauver(); pos++;
+        if (!mouvement) { carte(); return; }
+        pile.classList.add(su ? "leave-right" : "leave-left");
+        window.setTimeout(carte, 240);
       }
-      face.addEventListener("click", function () { retournee = !retournee; dessiner(); });
-      dessiner();
+      var boutons = el("div", { class: "two-btn" },
+        el("button", { class: "btn", type: "button", text: "À revoir", onclick: function () { repondre(false); } }),
+        el("button", { class: "btn btn-dark", type: "button", text: "Je la sais", onclick: function () { repondre(true); } }));
+      boutons.style.visibility = "hidden";
+      face.addEventListener("click", function () {
+        retournee = !retournee;
+        face.classList.toggle("is-back", retournee);
+        face.setAttribute("aria-pressed", String(retournee));
+        recto.setAttribute("aria-hidden", String(retournee));
+        verso.setAttribute("aria-hidden", String(!retournee));
+        annonce.textContent = retournee ? "Définition : " + k.def : "";
+        boutons.style.visibility = "visible";
+      });
       cont.appendChild(el("div", { class: "deck" },
         el("div", { class: "q-meta" }, el("span", { text: "Carte " + (pos + 1) + " sur " + ordre.length + ", chapitre " + c.id }),
           opts.retour ? el("button", { class: "link-btn", type: "button", text: "Arrêter", onclick: opts.retour }) : null),
-        barre(pos, ordre.length), face, boutons));
+        barre(pos, ordre.length), pile, annonce, boutons));
       remonter(cont);
       face.focus({ preventScroll: true });
     }
