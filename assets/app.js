@@ -119,7 +119,8 @@
       questionsSit: n(p.ok.situations, d.situations.items.length) };
     r.total = c.cartes.length + c.qcm.length + d.situations.items.length;
     r.fait = r.cartes + r.qcm + r.questionsSit;
-    r.pct = r.total ? Math.round(r.fait / r.total * 100) : 0;
+    /* Arrondi vers le bas : « 100 % » ne s'affiche que lorsque tout est vraiment validé. */
+    r.pct = r.total ? Math.floor(r.fait / r.total * 100) : 0;
     return r;
   }
   function jeuTermine(j) { try { return localStorage.getItem("sgn-jeu-" + j.id) === "termine"; } catch (e) { return false; } }
@@ -141,7 +142,7 @@
 
   /* ---------- Blocs communs ---------- */
   function barre(valeur, total, classe) {
-    var pct = total ? Math.round(valeur / total * 100) : 0;
+    var pct = total ? Math.floor(valeur / total * 100) : 0;
     var i = el("i"); i.style.width = pct + "%";
     return el("div", { class: "bar" + (classe ? " " + classe : ""), role: "progressbar", "aria-valuemin": "0", "aria-valuemax": String(total), "aria-valuenow": String(valeur) }, i);
   }
@@ -218,7 +219,7 @@
     CH_OUVERTS.forEach(function (c) { var k = compte(c); nbCartes += c.cartes.length; nbQ += c.qcm.length; nbS += c.situations.length; fait += k.fait; total += k.total; });
     var ev = evaluation(), jeux = tousLesJeux();
     var motsTitre = String(CFG.titre || "SGN").split(" "), dernierMot = motsTitre.pop();
-    var pct = total ? Math.round(fait / total * 100) : 0;
+    var pct = total ? Math.floor(fait / total * 100) : 0;
 
     return [
       el("section", null,
