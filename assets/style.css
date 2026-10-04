@@ -311,6 +311,11 @@ tbody th { font-weight: 700; }
 .act .btn { min-width: 150px; }
 @media (max-width: 760px) { .act { grid-template-columns: 1fr; } .act .btn { width: 100%; } }
 .run-gauge { margin-bottom: 6px; }
+/* Bouton de retour de l'entraînement (remonte d'un écran) */
+.fil { margin: 0 0 14px; }
+/* Police du texte : le Q de la police des titres a une longue queue qui fait croire que « QCM » est souligné. */
+.fil-retour, .fil-retour:hover { min-height: 44px; padding: 8px 16px; font-family: var(--text); font-weight: 700; font-size: 1rem; text-decoration: none; }
+
 /* Entraînement par thème */
 .t-block h3 { font-size: 1.25rem; margin-bottom: 6px; }
 .t-row { display: grid; grid-template-columns: 1.2fr 1fr auto; align-items: center; gap: 10px 24px; padding: 12px 0; border-top: 1px solid var(--line); }

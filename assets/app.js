@@ -411,7 +411,7 @@
   var mouvement = !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
   /* Flashcards : d'abord celles qui ne sont pas encore sues. L'élève s'arrête quand il veut. */
-  function lancerFlashcards(cont, c, retour) {
+  function lancerFlashcards(cont, c, retour, retourTexte) {
     var p = prog(c.id), tous = c.cartes.map(function (k, i) { return i; });
     var file = melanger(tous.filter(function (i) { return p.cartes.indexOf(i) < 0; }))
       .concat(melanger(tous.filter(function (i) { return p.cartes.indexOf(i) >= 0; })));
@@ -476,7 +476,7 @@
         el("p", { class: "lead", text: k.cartes === c.cartes.length ? "Tu sais toutes les définitions du chapitre." : "Flashcards sues sur ce chapitre. Les autres reviendront en premier la prochaine fois." }),
         el("div", { class: "actions" },
           pos < file.length ? el("button", { class: "btn btn-dark", type: "button", text: "Continuer", onclick: carte }) : null,
-          el("button", { class: "btn", type: "button", text: "Retour à l’entraînement", onclick: retour }))));
+          el("button", { class: "btn", type: "button", text: retourTexte || "Retour à l’entraînement", onclick: retour }))));
       remonter(cont);
     }
     carte();
@@ -595,97 +595,124 @@
           }))) : null,
         el("div", { class: "actions" },
           pos < file.length ? el("button", { class: "btn btn-dark", type: "button", text: "Continuer", onclick: question }) : null,
-          el("button", { class: "btn", type: "button", text: "Retour à l’entraînement", onclick: retour }))));
+          el("button", { class: "btn", type: "button", text: opts.retourTexte || "Retour à l’entraînement", onclick: retour }))));
       remonter(cont);
     }
     question();
   }
 
-  function ongletEntrainement(c, majEntete) {
+  /* Chaque écran de l'entraînement a sa propre adresse, pour que le bouton retour du téléphone remonte d'un écran :
+     #/chapitre/N/entrainement                 menu (Flashcards, QCM, Situations)
+     #/chapitre/N/entrainement/flashcards      série de flashcards
+     #/chapitre/N/entrainement/qcm             choix du thème (chapitre avec thèmes) ou série (sans thèmes)
+     #/chapitre/N/entrainement/qcm/T           choix du niveau du thème T
+     #/chapitre/N/entrainement/qcm/T/1         série : thème T, niveau 1 (ou 2)
+     #/chapitre/N/entrainement/qcm/tout        série : tout le chapitre
+     #/chapitre/N/entrainement/situations      choix du thème (ou série sans thèmes)
+     #/chapitre/N/entrainement/situations/T    série : mini-cas du thème T (ou « tout ») */
+  function ongletEntrainement(c, majEntete, chemin) {
+    chemin = chemin || [];
+    var base = "#/chapitre/" + c.id + "/entrainement";
     var zone = el("div");
+    var avecThemes = !!(c.themes && c.themes.length);
+    var D = donnees(c);
+    function duTheme(type, t) { return D[type].groupes.filter(function (g) { return g.theme === t; }); }
+    function nomT(t) { return c.themes && c.themes[t - 1] ? nomDuTheme(c.themes[t - 1]) : null; }
+    function aller(h) { return function () { location.hash = h; }; }
+
+    /* Un seul bouton pour remonter d'un écran. etapes : [[libellé, adresse], …], du menu à l'écran actuel. */
+    function fil(etapes) {
+      var parent = etapes[etapes.length - 2];
+      /* Si l'on vient de l'écran parent, on revient vraiment en arrière : le retour du téléphone reste cohérent. */
+      return el("nav", { class: "fil", "aria-label": "Revenir en arrière" },
+        el("a", { class: "btn fil-retour", href: parent[1], text: "← Retour", title: "Revenir à : " + parent[0],
+          onclick: function (ev) { if (adressePrecedente === parent[1]) { ev.preventDefault(); history.back(); } } }));
+    }
+    var E = ["Entraînement", base];
+
     function menu() {
-      vider(zone);
-      majEntete();
       var k = compte(c);
-      function activite(titre, quoi, fait, total, mot, lancer, texteBouton) {
+      function activite(titre, quoi, fait, total, mot, lien, texteBouton) {
         return el("div", { class: "card act" },
           el("div", { class: "act-txt" }, el("h3", { text: titre }), el("p", { class: "soft", text: quoi })),
           el("div", { class: "act-gauge" }, el("strong", { text: fait + " / " + total + " " + mot }), barre(fait, total)),
-          el("button", { class: "btn btn-dark", type: "button", text: texteBouton || (fait === 0 ? "Commencer" : fait === total ? "Refaire" : "Continuer"), onclick: lancer }));
+          el("a", { class: "btn btn-dark", href: lien, text: texteBouton || (fait === 0 ? "Commencer" : fait === total ? "Refaire" : "Continuer") }));
       }
-      var flash = activite("Flashcards", "Devine la définition, puis retourne la carte.", k.cartes, c.cartes.length, "sues", function () { lancerFlashcards(zone, c, menu); });
-
-      /* Chapitre sans thèmes : Flashcards, QCM, Situations. */
-      if (!c.themes || !c.themes.length) {
-        zone.appendChild(el("div", { class: "acts" },
-          el("p", { class: "lead", text: "Tu t’arrêtes quand tu veux : chaque bonne réponse est validée et gardée pour la prochaine fois." }),
-          flash,
-          activite("QCM", "Des questions de cours, corrigées une par une.", k.qcm, c.qcm.length, "validées", function () { lancerQuestions(zone, c, "qcm", menu); }),
-          activite("Situations", "Des mini-cas où tu appliques le cours.", k.situations, c.situations.length, "validées", function () { lancerQuestions(zone, c, "situations", menu); })));
-        remonter(zone);
-        return;
-      }
-
-      /* Chapitre avec thèmes : les trois mêmes activités. QCM et Situations ouvrent la liste des thèmes ;
-         pour les QCM, un thème ouvre ensuite le choix du niveau. */
       zone.appendChild(el("div", { class: "acts" },
         el("p", { class: "lead", text: "Tu t’arrêtes quand tu veux : chaque bonne réponse est validée et gardée pour la prochaine fois." }),
-        flash,
-        activite("QCM", "Choisis un thème, puis le niveau 1 ou le niveau 2.", k.qcm, c.qcm.length, "validées", choisirQcm, "Choisir"),
-        activite("Situations", "Des mini-cas où tu appliques le cours. Choisis un thème.", k.situations, c.situations.length, "validées", choisirSituations, "Choisir")));
-      remonter(zone);
+        activite("Flashcards", "Devine la définition, puis retourne la carte.", k.cartes, c.cartes.length, "sues", base + "/flashcards"),
+        avecThemes
+          ? activite("QCM", "Choisis un thème, puis le niveau 1 ou le niveau 2.", k.qcm, c.qcm.length, "validées", base + "/qcm", "Choisir")
+          : activite("QCM", "Des questions de cours, corrigées une par une.", k.qcm, c.qcm.length, "validées", base + "/qcm"),
+        avecThemes
+          ? activite("Situations", "Des mini-cas où tu appliques le cours. Choisis un thème.", k.situations, c.situations.length, "validées", base + "/situations", "Choisir")
+          : activite("Situations", "Des mini-cas où tu appliques le cours.", k.situations, c.situations.length, "validées", base + "/situations")));
     }
 
-    /* Écrans de choix (chapitre avec thèmes) */
-    function ecran(titre, retour, lignes) {
-      vider(zone);
-      majEntete();
-      zone.appendChild(el("div", { class: "acts" },
-        el("div", null, el("button", { class: "btn", type: "button", text: "← Retour", onclick: retour })),
+    /* Écran de choix : fil d'Ariane, puis une carte avec des lignes (nom, jauge, bouton) */
+    function ecran(etapes, titre, lignes) {
+      zone.appendChild(el("div", { class: "acts" }, fil(etapes),
         el("section", { class: "card t-block" }, el("h3", { text: titre }), lignes)));
-      remonter(zone);
     }
-    function ligne(titre, quoi, type, groupes, texteBouton, action) {
+    function ligne(titre, quoi, type, groupes, lien, texteBouton) {
       if (!groupes.length) { return null; }
       var fait = valides(c, type, groupes);
       return el("div", { class: "t-row" },
         el("div", { class: "t-txt" }, el("strong", { text: titre }), quoi ? el("span", { class: "soft", text: quoi }) : null),
         el("div", { class: "t-gauge" }, el("span", { class: "t-count", text: fait + " / " + groupes.length }), barre(fait, groupes.length, "mini")),
-        el("button", { class: "btn btn-dark", type: "button", text: texteBouton || (fait === 0 ? "Commencer" : fait === groupes.length ? "Refaire" : "Continuer"), onclick: action }));
+        el("a", { class: "btn btn-dark", href: lien, text: texteBouton || (fait === 0 ? "Commencer" : fait === groupes.length ? "Refaire" : "Continuer") }));
     }
-    function lancer(type, groupes, titre, retour) {
-      return function () { lancerQuestions(zone, c, type, retour, { groupes: groupes, titre: titre }); };
+    function serie(etapes, type, groupes, titre) {
+      var parent = etapes[etapes.length - 2];
+      zone.appendChild(fil(etapes));
+      var cont = el("div");
+      zone.appendChild(cont);
+      lancerQuestions(cont, c, type, aller(parent[1]), { groupes: groupes, titre: titre, retourTexte: "← Retour" });
     }
-    function duTheme(type, t) { return donnees(c)[type].groupes.filter(function (g) { return g.theme === t; }); }
-    function choisirQcm() {
-      var D = donnees(c);
-      ecran("QCM : choisis un thème", menu, [
-        c.themes.map(function (nomT, i) {
-          return ligne(nomDuTheme(nomT), null, "qcm", duTheme("qcm", i + 1), "Choisir", function () { choisirNiveau(i + 1); });
-        }),
-        ligne("Tout le chapitre mélangé", "Les deux niveaux", "qcm", D.qcm.groupes, null, lancer("qcm", D.qcm.groupes, "Tous les QCM du chapitre", choisirQcm))
-      ]);
+
+    var type = chemin[0], t = Number(chemin[1]), n = Number(chemin[2]);
+    if (type === "flashcards") {
+      zone.appendChild(fil([E, ["Flashcards", base + "/flashcards"]]));
+      var contF = el("div"); zone.appendChild(contF);
+      lancerFlashcards(contF, c, aller(base), "← Retour");
     }
-    function choisirNiveau(t) {
-      var nomT = nomDuTheme(c.themes[t - 1]);
-      function niveau(n) { return duTheme("qcm", t).filter(function (g) { return g.niveau === n; }); }
-      function retour() { choisirNiveau(t); }
-      ecran(nomT, choisirQcm, [
-        ligne("Niveau 1", "Je connais", "qcm", niveau(1), null, lancer("qcm", niveau(1), nomT + " · Niveau 1", retour)),
-        ligne("Niveau 2", "Je réfléchis", "qcm", niveau(2), null, lancer("qcm", niveau(2), nomT + " · Niveau 2", retour))
-      ]);
+    else if ((type === "qcm" || type === "situations") && !avecThemes) {
+      var nomA = type === "qcm" ? "QCM" : "Situations";
+      serie([E, [nomA, base + "/" + type]], type, D[type].groupes, null);
     }
-    function choisirSituations() {
-      var D = donnees(c);
-      ecran("Situations : choisis un thème", menu, [
-        c.themes.map(function (nomT, i) {
+    else if (type === "qcm" && chemin[1] === "tout") {
+      serie([E, ["QCM", base + "/qcm"], ["Tout le chapitre", base + "/qcm/tout"]], "qcm", D.qcm.groupes, "Tous les QCM du chapitre");
+    }
+    else if (type === "qcm" && nomT(t) && (n === 1 || n === 2)) {
+      var gN = duTheme("qcm", t).filter(function (g) { return g.niveau === n; });
+      serie([E, ["QCM", base + "/qcm"], [nomT(t), base + "/qcm/" + t], ["Niveau " + n, base + "/qcm/" + t + "/" + n]], "qcm", gN, nomT(t) + " · Niveau " + n);
+    }
+    else if (type === "qcm" && nomT(t)) {
+      var niveau = function (k) { return duTheme("qcm", t).filter(function (g) { return g.niveau === k; }); };
+      ecran([E, ["QCM", base + "/qcm"], [nomT(t), base + "/qcm/" + t]], nomT(t), [
+        ligne("Niveau 1", "Je connais", "qcm", niveau(1), base + "/qcm/" + t + "/1"),
+        ligne("Niveau 2", "Je réfléchis", "qcm", niveau(2), base + "/qcm/" + t + "/2")]);
+    }
+    else if (type === "qcm") {
+      ecran([E, ["QCM", base + "/qcm"]], "QCM : choisis un thème", [
+        c.themes.map(function (x, i) { return ligne(nomDuTheme(x), null, "qcm", duTheme("qcm", i + 1), base + "/qcm/" + (i + 1), "Choisir"); }),
+        ligne("Tout le chapitre mélangé", "Les deux niveaux", "qcm", D.qcm.groupes, base + "/qcm/tout")]);
+    }
+    else if (type === "situations" && chemin[1] === "tout") {
+      serie([E, ["Situations", base + "/situations"], ["Toutes", base + "/situations/tout"]], "situations", D.situations.groupes, "Toutes les situations du chapitre");
+    }
+    else if (type === "situations" && nomT(t)) {
+      serie([E, ["Situations", base + "/situations"], [nomT(t), base + "/situations/" + t]], "situations", duTheme("situations", t), nomT(t) + " · Situations");
+    }
+    else if (type === "situations") {
+      ecran([E, ["Situations", base + "/situations"]], "Situations : choisis un thème", [
+        c.themes.map(function (x, i) {
           var g = duTheme("situations", i + 1);
-          return ligne(nomDuTheme(nomT), pluriel(g.length, "mini-cas", "mini-cas"), "situations", g, null, lancer("situations", g, nomDuTheme(nomT) + " · Situations", choisirSituations));
+          return ligne(nomDuTheme(x), pluriel(g.length, "mini-cas", "mini-cas"), "situations", g, base + "/situations/" + (i + 1));
         }),
-        ligne("Toutes les situations mélangées", null, "situations", D.situations.groupes, null, lancer("situations", D.situations.groupes, "Toutes les situations du chapitre", choisirSituations))
-      ]);
+        ligne("Toutes les situations mélangées", null, "situations", D.situations.groupes, base + "/situations/tout")]);
     }
-    menu();
+    else { menu(); }
     return zone;
   }
 
@@ -722,7 +749,7 @@
   }
 
   /* ---------- Page : un chapitre ---------- */
-  function pageChapitre(c, ongletId) {
+  function pageChapitre(c, ongletId, chemin) {
     var anciens = { cartes: "entrainement", qcm: "entrainement", situations: "entrainement" };
     ongletId = anciens[ongletId] || ongletId;
     var libre = ouvert(c);
@@ -749,7 +776,7 @@
 
     var contenu = fermes.indexOf(actif[0]) >= 0 ? ongletVerrouille(c)
       : actif[0] === "lexique" ? ongletLexique(c)
-      : actif[0] === "entrainement" ? ongletEntrainement(c, majEntete)
+      : actif[0] === "entrainement" ? ongletEntrainement(c, majEntete, chemin)
       : actif[0] === "documents" ? ongletDocuments(c)
       : actif[0] === "jeux" ? ongletJeux(c)
       : ongletSynthese(c);
@@ -771,15 +798,16 @@
   }
 
   /* ---------- Navigation ---------- */
-  var derniereCle = null;
+  var derniereCle = null, adresseActuelle = location.hash, adressePrecedente = null;
   function afficher() {
+    if (location.hash !== adresseActuelle) { adressePrecedente = adresseActuelle; adresseActuelle = location.hash; }
     var parts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
     var nav = "accueil", contenu, cle = "accueil";
     if (parts[0] === "chapitres") { nav = "chapitres"; cle = "chapitres"; contenu = pageChapitres(); }
     else if (parts[0] === "partager") { nav = ""; cle = "partager"; contenu = pagePartager(); }
     else if (parts[0] === "chapitre" && chapitre(Number(parts[1]))) {
       nav = "chapitres"; cle = "chapitre-" + parts[1];
-      contenu = pageChapitre(chapitre(Number(parts[1])), parts[2]);
+      contenu = pageChapitre(chapitre(Number(parts[1])), parts[2], parts.slice(3));
     }
     else { contenu = pageAccueil(); }
 
@@ -794,11 +822,11 @@
     var t = c ? "Chapitre " + c.id + " : " + c.titre : (cle === "chapitres" ? "Les chapitres" : cle === "partager" ? "Partager le site" : "");
     document.title = (t ? t + " | " : "") + (CFG.titre || "SGN") + " · " + (CFG.prof || "");
 
-    if (cle !== derniereCle) { window.scrollTo(0, 0); }
-    else if (c) {
-      var e = document.getElementById("onglets");
-      if (e && e.getBoundingClientRect().top < 0) { e.scrollIntoView(); }
-    }
+    var e = document.getElementById("onglets");
+    /* Dans un écran de l'entraînement (série, choix du thème…), on montre directement le fil d'Ariane. */
+    if (c && parts.length > 3 && e) { e.scrollIntoView(); }
+    else if (cle !== derniereCle) { window.scrollTo(0, 0); }
+    else if (c && e && e.getBoundingClientRect().top < 0) { e.scrollIntoView(); }
     derniereCle = cle;
   }
 
