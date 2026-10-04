@@ -380,7 +380,7 @@
   function texteFiche(k) {
     return [k.terme, k.def].concat((k.sous || []).map(function (x) { return x.terme + " " + x.def; })).join(" ");
   }
-  function ongletLexique(c) {
+  function ongletLexique(c, m) {
     var sues = prog(c.id).cartes;
     var fiches = c.cartes.map(function (k, i) {
       return { k: k, n: el("div", { class: sues.indexOf(i) >= 0 ? "known" : "" }, el("dt", { text: k.terme }),
@@ -391,6 +391,7 @@
     function norm(s) { return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
     var champ = el("input", { class: "search", type: "search", placeholder: "Cherche un mot du chapitre", "aria-label": "Chercher dans le lexique",
       oninput: function () {
+        if (m) { m.recherche = champ.value; }
         var q = norm(champ.value.trim()), n = 0;
         fiches.forEach(function (f) {
           var ok = !q || norm(texteFiche(f.k)).indexOf(q) >= 0;
@@ -398,6 +399,7 @@
         });
         vide.hidden = n > 0;
       } });
+    if (m && m.recherche) { champ.value = m.recherche; champ.dispatchEvent(new Event("input")); }
     return el("div", { class: "syn" },
       el("p", { class: "lead", text: pluriel(c.cartes.length, "définition") + " à connaître pour ce chapitre." }),
       c.cartes.length > 8 ? champ : null,
@@ -664,6 +666,7 @@
     }
     function serie(etapes, type, groupes, titre) {
       var parent = etapes[etapes.length - 2];
+      zone.setAttribute("data-serie", "1");
       zone.appendChild(fil(etapes));
       var cont = el("div");
       zone.appendChild(cont);
@@ -672,6 +675,7 @@
 
     var type = chemin[0], t = Number(chemin[1]), n = Number(chemin[2]);
     if (type === "flashcards") {
+      zone.setAttribute("data-serie", "1");
       zone.appendChild(fil([E, ["Flashcards", base + "/flashcards"]]));
       var contF = el("div"); zone.appendChild(contF);
       lancerFlashcards(contF, c, aller(base), "← Retour");
@@ -749,7 +753,17 @@
   }
 
   /* ---------- Page : un chapitre ---------- */
+  /* Mémoire des onglets du chapitre ouvert : l'élève peut passer de l'entraînement à la synthèse ou au lexique
+     et revenir exactement où il en était (même question, même endroit de la synthèse, même recherche).
+     Tient tant que la page reste ouverte ; les réponses, elles, sont toujours enregistrées tout de suite. */
+  var memoire = { chap: null };
+  function memoireDuChapitre(c) {
+    if (memoire.chap !== c.id) { memoire = { chap: c.id, serie: null, dernierEntrainement: null, positions: {}, recherche: "" }; }
+    return memoire;
+  }
+
   function pageChapitre(c, ongletId, chemin) {
+    var m = memoireDuChapitre(c), adresse = location.hash, repris = false;
     var anciens = { cartes: "entrainement", qcm: "entrainement", situations: "entrainement" };
     ongletId = anciens[ongletId] || ongletId;
     var libre = ouvert(c);
@@ -774,9 +788,17 @@
     majEntete();
     surProgression = majEntete;
 
+    /* Une série en cours (questions ou flashcards) est gardée telle quelle si l'on revient d'un autre onglet. */
+    function entrainementGarde() {
+      m.dernierEntrainement = adresse;
+      if (m.serie && m.serie.adresse === adresse) { repris = true; return m.serie.node; }
+      var z = ongletEntrainement(c, majEntete, chemin);
+      m.serie = z.getAttribute("data-serie") ? { adresse: adresse, node: z } : null;
+      return z;
+    }
     var contenu = fermes.indexOf(actif[0]) >= 0 ? ongletVerrouille(c)
-      : actif[0] === "lexique" ? ongletLexique(c)
-      : actif[0] === "entrainement" ? ongletEntrainement(c, majEntete, chemin)
+      : actif[0] === "lexique" ? ongletLexique(c, m)
+      : actif[0] === "entrainement" ? entrainementGarde()
       : actif[0] === "documents" ? ongletDocuments(c)
       : actif[0] === "jeux" ? ongletJeux(c)
       : ongletSynthese(c);
@@ -790,17 +812,23 @@
       libre ? entete : el("p", { class: "tag lock-tag", text: "Chapitre en cours en classe : synthèse et entraînement bientôt disponibles" }),
       el("nav", { class: "tabs tabs-" + onglets.length, id: "onglets", "aria-label": "Les rubriques du chapitre" }, onglets.map(function (o) {
         var ferme = fermes.indexOf(o[0]) >= 0;
-        return el("a", { href: "#/chapitre/" + c.id + "/" + o[0], class: ferme ? "is-locked" : null, "aria-current": o[0] === actif[0] ? "page" : null },
+        /* L'onglet Entraînement ramène à l'écran où l'élève en était (sa série en cours, par exemple). */
+        var lien = o[0] === "entrainement" && m.dernierEntrainement && !ferme ? m.dernierEntrainement : "#/chapitre/" + c.id + "/" + o[0];
+        return el("a", { href: lien, class: ferme ? "is-locked" : null, "aria-current": o[0] === actif[0] ? "page" : null },
           ferme ? cadenas() : null, ferme ? el("span", { class: "sr-only", text: "Verrouillé : " }) : null, o[1]);
       })),
       contenu
-    ];
+    ].concat([{ repris: repris, onglet: actif[0] }]);
   }
 
   /* ---------- Navigation ---------- */
   var derniereCle = null, adresseActuelle = location.hash, adressePrecedente = null;
   function afficher() {
-    if (location.hash !== adresseActuelle) { adressePrecedente = adresseActuelle; adresseActuelle = location.hash; }
+    if (location.hash !== adresseActuelle) {
+      /* On note où l'élève en était sur la page qu'il quitte, pour l'y ramener s'il revient. */
+      if (memoire.positions) { memoire.positions[adresseActuelle] = window.scrollY; }
+      adressePrecedente = adresseActuelle; adresseActuelle = location.hash;
+    }
     var parts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
     var nav = "accueil", contenu, cle = "accueil";
     if (parts[0] === "chapitres") { nav = "chapitres"; cle = "chapitres"; contenu = pageChapitres(); }
@@ -811,8 +839,9 @@
     }
     else { contenu = pageAccueil(); }
 
+    var info = {};
     vider(app);
-    contenu.forEach(function add(n) { if (Array.isArray(n)) { n.forEach(add); } else if (n) { app.appendChild(n); } });
+    contenu.forEach(function add(n) { if (Array.isArray(n)) { n.forEach(add); } else if (n && n.nodeType) { app.appendChild(n); } else if (n) { info = n; } });
     majIndicesTableaux();
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-nav]"), function (a) {
@@ -823,12 +852,44 @@
     document.title = (t ? t + " | " : "") + (CFG.titre || "SGN") + " · " + (CFG.prof || "");
 
     var e = document.getElementById("onglets");
-    /* Dans un écran de l'entraînement (série, choix du thème…), on montre directement le fil d'Ariane. */
-    if (c && parts.length > 3 && e) { e.scrollIntoView(); }
+    majBarres(true);
+    var position = c && memoire.positions ? memoire.positions[location.hash] : null;
+    /* Retour sur la synthèse, le lexique ou une série en cours : on revient exactement où l'élève lisait. */
+    if (c && position != null && (info.onglet !== "entrainement" || info.repris)) { window.scrollTo(0, position); }
+    /* Dans un écran de l'entraînement (série, choix du thème…), on montre directement le haut de l'écran. */
+    else if (c && parts.length > 3 && e) { e.scrollIntoView(); }
     else if (cle !== derniereCle) { window.scrollTo(0, 0); }
     else if (c && e && e.getBoundingClientRect().top < 0) { e.scrollIntoView(); }
     derniereCle = cle;
   }
+
+  /* ---------- Barre du site et onglets : cachées quand on descend pour lire, de retour dès qu'on remonte ---------- */
+  var racine = document.documentElement, barreHaut = document.querySelector(".top");
+  var dernierY = window.scrollY, calmeJusqua = 0, enAttente = false;
+  function majBarres(montrer) {
+    var o = document.getElementById("onglets");
+    racine.style.setProperty("--haut-barre", barreHaut.offsetHeight + "px");
+    racine.style.setProperty("--haut-onglets", (o ? o.offsetHeight : 0) + "px");
+    if (montrer) {
+      document.body.classList.remove("barres-cachees");
+      calmeJusqua = Date.now() + 500; /* un défilement automatique juste après un changement de page ne cache rien */
+      dernierY = window.scrollY;
+    }
+  }
+  window.addEventListener("scroll", function () {
+    if (enAttente) { return; }
+    enAttente = true;
+    window.requestAnimationFrame(function () {
+      enAttente = false;
+      var y = window.scrollY;
+      if (Date.now() < calmeJusqua || window.innerWidth >= 900) { dernierY = y; return; }
+      if (y < 80) { document.body.classList.remove("barres-cachees"); }
+      else if (y > dernierY + 8) { document.body.classList.add("barres-cachees"); }
+      else if (y < dernierY - 8) { document.body.classList.remove("barres-cachees"); }
+      if (Math.abs(y - dernierY) > 8) { dernierY = y; }
+    });
+  }, { passive: true });
+  window.addEventListener("resize", function () { majBarres(false); });
 
   /* ---------- Thème clair / sombre ---------- */
   var themeBtn = document.getElementById("theme-btn");
