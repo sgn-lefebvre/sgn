@@ -875,6 +875,7 @@
       calmeJusqua = Date.now() + 500; /* un défilement automatique juste après un changement de page ne cache rien */
       dernierY = window.scrollY;
     }
+    majColles();
   }
   window.addEventListener("scroll", function () {
     if (enAttente) { return; }
@@ -882,6 +883,7 @@
     window.requestAnimationFrame(function () {
       enAttente = false;
       var y = window.scrollY;
+      majColles();
       if (Date.now() < calmeJusqua || window.innerWidth >= 900) { dernierY = y; return; }
       if (y < 80) { document.body.classList.remove("barres-cachees"); }
       else if (y > dernierY + 8) { document.body.classList.add("barres-cachees"); }
@@ -889,7 +891,15 @@
       if (Math.abs(y - dernierY) > 8) { dernierY = y; }
     });
   }, { passive: true });
-  window.addEventListener("resize", function () { majBarres(false); });
+  /* Les onglets ne bougent que s'ils sont collés en haut de l'écran ; à leur place normale dans la page, ils restent fixes. */
+  function majColles() {
+    var o = document.getElementById("onglets");
+    if (!o) { return; }
+    var repere = o.previousElementSibling;
+    var colles = !!repere && repere.getBoundingClientRect().bottom < barreHaut.offsetHeight;
+    o.classList.toggle("colles", colles);
+  }
+  window.addEventListener("resize", function () { majBarres(false); majColles(); });
 
   /* ---------- Thème clair / sombre ---------- */
   var themeBtn = document.getElementById("theme-btn");
