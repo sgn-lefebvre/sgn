@@ -852,7 +852,6 @@
     document.title = (t ? t + " | " : "") + (CFG.titre || "SGN") + " · " + (CFG.prof || "");
 
     var e = document.getElementById("onglets");
-    majBarres(true);
     var position = c && memoire.positions ? memoire.positions[location.hash] : null;
     /* Retour sur la synthèse, le lexique ou une série en cours : on revient exactement où l'élève lisait. */
     if (c && position != null && (info.onglet !== "entrainement" || info.repris)) { window.scrollTo(0, position); }
@@ -862,44 +861,6 @@
     else if (c && e && e.getBoundingClientRect().top < 0) { e.scrollIntoView(); }
     derniereCle = cle;
   }
-
-  /* ---------- Barre du site et onglets : cachées quand on descend pour lire, de retour dès qu'on remonte ---------- */
-  var racine = document.documentElement, barreHaut = document.querySelector(".top");
-  var dernierY = window.scrollY, calmeJusqua = 0, enAttente = false;
-  function majBarres(montrer) {
-    var o = document.getElementById("onglets");
-    racine.style.setProperty("--haut-barre", barreHaut.offsetHeight + "px");
-    racine.style.setProperty("--haut-onglets", (o ? o.offsetHeight : 0) + "px");
-    if (montrer) {
-      document.body.classList.remove("barres-cachees");
-      calmeJusqua = Date.now() + 500; /* un défilement automatique juste après un changement de page ne cache rien */
-      dernierY = window.scrollY;
-    }
-    majColles();
-  }
-  window.addEventListener("scroll", function () {
-    if (enAttente) { return; }
-    enAttente = true;
-    window.requestAnimationFrame(function () {
-      enAttente = false;
-      var y = window.scrollY;
-      majColles();
-      if (Date.now() < calmeJusqua || window.innerWidth >= 900) { dernierY = y; return; }
-      if (y < 80) { document.body.classList.remove("barres-cachees"); }
-      else if (y > dernierY + 8) { document.body.classList.add("barres-cachees"); }
-      else if (y < dernierY - 8) { document.body.classList.remove("barres-cachees"); }
-      if (Math.abs(y - dernierY) > 8) { dernierY = y; }
-    });
-  }, { passive: true });
-  /* Les onglets ne bougent que s'ils sont collés en haut de l'écran ; à leur place normale dans la page, ils restent fixes. */
-  function majColles() {
-    var o = document.getElementById("onglets");
-    if (!o) { return; }
-    var repere = o.previousElementSibling;
-    var colles = !!repere && repere.getBoundingClientRect().bottom < barreHaut.offsetHeight;
-    o.classList.toggle("colles", colles);
-  }
-  window.addEventListener("resize", function () { majBarres(false); majColles(); });
 
   /* ---------- Thème clair / sombre ---------- */
   var themeBtn = document.getElementById("theme-btn");
