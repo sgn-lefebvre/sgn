@@ -261,7 +261,48 @@
           el("div", { class: "card step-card" }, el("h3", { text: "Synthèse" }), el("p", { text: "La synthèse du cours, telle que tu l’as en classe." })),
           el("div", { class: "card step-card" }, el("h3", { text: "Lexique" }), el("p", { text: "Toutes les définitions à connaître, une par notion." })),
           el("div", { class: "card step-card" }, el("h3", { text: "Entraînement" }), el("p", { text: "Flashcards, QCM et situations. Chaque bonne réponse est validée." })),
-          el("div", { class: "card step-card" }, el("h3", { text: "Jeux et documents" }), el("p", { text: "Quand le chapitre en a : une mise en situation à jouer, des TD à télécharger." }))))
+          el("div", { class: "card step-card" }, el("h3", { text: "Jeux et documents" }), el("p", { text: "Quand le chapitre en a : une mise en situation à jouer, des TD à télécharger." })))),
+
+      blocPartage()
+    ];
+  }
+
+  /* ---------- Partager le site : QR code (image fixe assets/qr-site.svg), partage, copie du lien ---------- */
+  function adresseSite() { return CFG.adresse || location.href.split("#")[0]; }
+  function boutonsPartage() {
+    var url = adresseSite(), info = el("p", { class: "soft share-info", "aria-live": "polite" });
+    var partager = navigator.share ? el("button", { class: "btn btn-dark", type: "button", text: "Partager",
+      onclick: function () { navigator.share({ title: CFG.titre || "Révision SGN", text: "Révisions de SGN en 1re STMG", url: url }).catch(function () {}); } }) : null;
+    var copier = el("button", { class: "btn", type: "button", text: "Copier le lien", onclick: function () {
+      function ok() { info.textContent = "Lien copié."; }
+      if (navigator.clipboard && navigator.clipboard.writeText) { navigator.clipboard.writeText(url).then(ok, function () { info.textContent = url; }); }
+      else { info.textContent = url; }
+    } });
+    return [el("div", { class: "actions share-actions" }, partager, copier), info];
+  }
+  function blocPartage() {
+    var url = adresseSite();
+    return el("section", null,
+      el("h2", { class: "h2", text: "Partager le site" }),
+      el("div", { class: "card share" },
+        el("a", { class: "share-qr", href: "#/partager", "aria-label": "Afficher le QR code en grand" },
+          el("img", { src: "assets/qr-site.svg", alt: "QR code du site " + url, width: "148", height: "148" })),
+        el("div", { class: "share-txt" },
+          el("p", null, "Scanne le QR code avec l’appareil photo du téléphone, ou utilise le lien :"),
+          el("p", { class: "share-url", text: url.replace(/^https?:\/\//, "").replace(/\/$/, "") }),
+          boutonsPartage(),
+          el("a", { class: "link-btn", href: "#/partager", text: "Agrandir le QR code" }))));
+  }
+  function pagePartager() {
+    var url = adresseSite();
+    return [
+      el("a", { class: "btn back", href: "#/", text: "← Accueil" }),
+      el("div", { class: "share-big" },
+        el("h1", { class: "title", text: CFG.titre || "Révision SGN" }),
+        el("p", { class: "lead", text: "Scanne ce QR code avec l’appareil photo de ton téléphone." }),
+        el("img", { class: "share-big-qr", src: "assets/qr-site.svg", alt: "QR code du site " + url }),
+        el("p", { class: "share-url", text: url.replace(/^https?:\/\//, "").replace(/\/$/, "") }),
+        boutonsPartage())
     ];
   }
 
@@ -725,6 +766,7 @@
     var parts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
     var nav = "accueil", contenu, cle = "accueil";
     if (parts[0] === "chapitres") { nav = "chapitres"; cle = "chapitres"; contenu = pageChapitres(); }
+    else if (parts[0] === "partager") { nav = ""; cle = "partager"; contenu = pagePartager(); }
     else if (parts[0] === "chapitre" && chapitre(Number(parts[1]))) {
       nav = "chapitres"; cle = "chapitre-" + parts[1];
       contenu = pageChapitre(chapitre(Number(parts[1])), parts[2]);
@@ -738,7 +780,7 @@
       if (a.getAttribute("data-nav") === nav) { a.setAttribute("aria-current", "page"); } else { a.removeAttribute("aria-current"); }
     });
     var c = cle.indexOf("chapitre-") === 0 ? chapitre(Number(parts[1])) : null;
-    var t = c ? "Chapitre " + c.id + " : " + c.titre : (cle === "chapitres" ? "Les chapitres" : "");
+    var t = c ? "Chapitre " + c.id + " : " + c.titre : (cle === "chapitres" ? "Les chapitres" : cle === "partager" ? "Partager le site" : "");
     document.title = (t ? t + " | " : "") + (CFG.titre || "SGN") + " · " + (CFG.prof || "");
 
     if (cle !== derniereCle) { window.scrollTo(0, 0); }

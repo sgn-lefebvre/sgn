@@ -253,6 +253,20 @@ tbody th { font-weight: 700; }
 .locked-card .lock-icon svg { width: 26px; height: 26px; }
 .locked-card .actions { margin-bottom: 0; }
 
+/* Partager le site : le QR code reste noir sur blanc, même en mode sombre, pour être lisible par tous les téléphones */
+.share { display: flex; align-items: center; gap: 24px; }
+.share-qr { flex: none; display: block; background: #fff; padding: 6px; border-radius: var(--r-sm); border: 1px solid var(--line); line-height: 0; }
+.share-qr img { width: 148px; height: 148px; image-rendering: pixelated; }
+.share-txt { min-width: 0; }
+.share-txt p { margin: 0 0 6px; }
+.share-url { font-family: var(--display); font-weight: 800; font-size: 1.15rem; overflow-wrap: anywhere; }
+.share-actions { margin: 12px 0 6px; }
+.share-info { min-height: 1.4em; margin: 0 0 6px; }
+.share-big { text-align: center; max-width: 560px; margin: 0 auto; }
+.share-big .actions { justify-content: center; }
+.share-big-qr { display: block; width: min(80vw, 420px); height: auto; margin: 10px auto 14px; background: #fff; padding: 10px; border-radius: var(--r-md); border: 1px solid var(--line); image-rendering: pixelated; }
+@media (max-width: 560px) { .share { flex-direction: column; align-items: flex-start; } }
+
 /* Documents (TD, fiches) */
 .doc-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; max-width: 760px; }
 .doc { display: flex; align-items: center; justify-content: space-between; gap: 16px; text-decoration: none; }

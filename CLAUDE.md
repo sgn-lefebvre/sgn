@@ -15,6 +15,7 @@ Aucun framework, aucune étape de build : HTML, CSS et JavaScript simples.
 - `assets/app.js` : le moteur (navigation par `#/…`, onglets, entraînement, progression). Aucun contenu de cours.
 - `assets/style.css` : le style. Les couleurs sont des variables en haut du fichier.
 - `assets/fonts/` : polices hébergées dans le site (licence OFL). Ne pas les remplacer par un appel à Google Fonts.
+- `assets/qr-site.svg` : le QR code vers l'adresse publique du site (`adresse` dans `data/config.js`). Il s'affiche en bas de l'accueil (« Partager le site ») et en grand sur la page `#/partager`, avec un bouton « Partager » (téléphones) et « Copier le lien ». Si l'adresse du site change, refaire le QR code et vérifier qu'il se décode bien.
 - `data/config.js` : titre, professeur, chapitre en cours, prochaine évaluation, noms des thèmes.
 - `data/chXX.js` : un fichier par chapitre.
 - `activites/` : les jeux, un dossier par jeu avec son `index.html`.

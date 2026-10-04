@@ -4,6 +4,9 @@
 window.SGN = {
   config: {
     titre: "Révision SGN",
+    /* Adresse publique du site. Le QR code assets/qr-site.svg pointe vers elle :
+       si l’adresse change, il faut refaire le QR code. */
+    adresse: "https://sgn-lefebvre.github.io/sgn/",
     prof: "M. Lefebvre",
     classe: "1re STMG",
     matiere: "Sciences de gestion et numérique",
