@@ -10,13 +10,6 @@
   var CH = SGN.chapitres.slice().sort(function (a, b) { return a.id - b.id; });
   var app = document.getElementById("app");
 
-  var ETAPES = [
-    { id: "synthese", n: 1, nom: "Je relis", quoi: "La synthèse du chapitre." },
-    { id: "cartes", n: 2, nom: "Je retiens", quoi: "Les définitions, en cartes à retourner." },
-    { id: "qcm", n: 3, nom: "QCM", quoi: "Des questions de cours, avec chaque réponse expliquée." },
-    { id: "situations", n: 4, nom: "Situations", quoi: "Des mini-cas où tu appliques le cours, comme dans une étude de documents." }
-  ];
-
   /* ---------- Outils ---------- */
   function el(tag, props) {
     var n = document.createElement(tag);
@@ -55,50 +48,77 @@
   function chapitre(id) { return CH.filter(function (c) { return c.id === id; })[0]; }
   function nomTheme(t) { return (CFG.themes && CFG.themes[t]) || ""; }
 
-  /* ---------- Progression (enregistrée sur l'appareil) ---------- */
-  var KEY = "sgn-progression-v1";
+  /* ---------- Progression (enregistrée sur l'appareil) ----------
+     Par chapitre : cartes = flashcards sues ; ok = questions validées (dernière réponse juste) ;
+     vu = questions déjà rencontrées. Les numéros sont les positions dans data/chXX.js. */
+  var KEY = "sgn-progression-v2";
   var store = (function () {
-    try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; }
+    try {
+      var s = JSON.parse(localStorage.getItem(KEY));
+      if (s) { return s; }
+      var v1 = JSON.parse(localStorage.getItem("sgn-progression-v1"));
+      if (v1 && v1.ch) {
+        var repris = { ch: {} };
+        Object.keys(v1.ch).forEach(function (id) { repris.ch[id] = { cartes: v1.ch[id].cartes || [] }; });
+        return repris;
+      }
+    } catch (e) { /* stockage indisponible */ }
+    return {};
   })();
   function sauver() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) { /* stockage indisponible : on continue sans */ } }
   function prog(id) {
     store.ch = store.ch || {};
     var p = store.ch[id] = store.ch[id] || {};
-    p.marks = p.marks || {};
     p.cartes = p.cartes || [];
-    p.err = p.err || {};
-    p.err.qcm = p.err.qcm || [];
-    p.err.situations = p.err.situations || [];
-    p.score = p.score || {};
+    p.ok = p.ok || {};
+    p.vu = p.vu || {};
+    ["qcm", "situations"].forEach(function (t) { p.ok[t] = p.ok[t] || []; p.vu[t] = p.vu[t] || []; });
     return p;
   }
   function ajoute(liste, v) { if (liste.indexOf(v) < 0) { liste.push(v); } }
   function retire(liste, v) { var i = liste.indexOf(v); if (i >= 0) { liste.splice(i, 1); } }
-  function nbMaitrises() { return CH.filter(function (c) { return prog(c.id).marks.su; }).length; }
-  function toutesErreurs() {
-    var items = [];
-    CH.forEach(function (c) {
-      ["qcm", "situations"].forEach(function (type) {
-        prog(c.id).err[type].forEach(function (i) { if (c[type][i]) { items.push({ ch: c.id, type: type, i: i }); } });
-      });
-    });
-    return items;
+  function compte(c) {
+    var p = prog(c.id);
+    function n(liste, max) { return liste.filter(function (i) { return i < max; }).length; }
+    var r = { cartes: n(p.cartes, c.cartes.length), qcm: n(p.ok.qcm, c.qcm.length), situations: n(p.ok.situations, c.situations.length) };
+    r.total = c.cartes.length + c.qcm.length + c.situations.length;
+    r.fait = r.cartes + r.qcm + r.situations;
+    r.pct = r.total ? Math.round(r.fait / r.total * 100) : 0;
+    return r;
+  }
+  function jeuTermine(j) { try { return localStorage.getItem("sgn-jeu-" + j.id) === "termine"; } catch (e) { return false; } }
+
+  /* ---------- Prochaine évaluation (réglée dans data/config.js) ---------- */
+  function evaluation() {
+    var e = CFG.evaluation;
+    if (!e || !e.date || !chapitre(e.chapitre)) { return null; }
+    var p = String(e.date).split("-");
+    var jour = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    if (isNaN(jour.getTime())) { return null; }
+    var auj = new Date(); auj.setHours(0, 0, 0, 0);
+    var reste = Math.round((jour - auj) / 86400000);
+    if (reste < 0) { return null; }
+    var texte = jour.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }).replace(/ 1 /, " 1er ");
+    return { chapitre: chapitre(e.chapitre), texte: texte,
+      delai: reste === 0 ? "aujourd’hui" : reste === 1 ? "demain" : "dans " + reste + " jours" };
   }
 
   /* ---------- Blocs communs ---------- */
-  function points(c) {
-    var m = prog(c.id).marks;
-    return el("span", { class: "dots", role: "img", "aria-label": "Lu : " + (m.lu ? "oui" : "non") + ", su : " + (m.su ? "oui" : "non") + ", revu : " + (m.revu ? "oui" : "non") },
-      el("i", { class: m.lu ? "on" : "" }), el("i", { class: m.su ? "on" : "" }), el("i", { class: m.revu ? "on" : "" }));
+  function barre(valeur, total, classe) {
+    var pct = total ? Math.round(valeur / total * 100) : 0;
+    var i = el("i"); i.style.width = pct + "%";
+    return el("div", { class: "bar" + (classe ? " " + classe : ""), role: "progressbar", "aria-valuemin": "0", "aria-valuemax": String(total), "aria-valuenow": String(valeur) }, i);
   }
   function ligneChapitre(c) {
-    var enCours = c.id === CFG.chapitreEnCours;
+    var enCours = c.id === CFG.chapitreEnCours, ev = evaluation(), k = compte(c), nbJeux = (c.jeux || []).length;
     return el("li", null,
       el("a", { class: "ch-row", href: "#/chapitre/" + c.id },
         el("span", { class: "ch-num", "aria-hidden": "true", text: String(c.id) }),
-        el("span", { class: "ch-name" }, "Chapitre " + c.id + " : " + c.titre, enCours ? el("span", { class: "pill", text: "en cours" }) : null,
-          el("small", { text: pluriel(c.cartes.length, "carte") + ", " + pluriel(c.qcm.length + c.situations.length, "question") })),
-        points(c)));
+        el("span", { class: "ch-name" }, "Chapitre " + c.id + " : " + c.titre,
+          enCours ? el("span", { class: "pill", text: "en cours" }) : null,
+          ev && ev.chapitre.id === c.id ? el("span", { class: "pill pill-eval", text: "évaluation " + ev.texte }) : null,
+          el("small", { text: pluriel(c.cartes.length, "flashcard") + ", " + c.qcm.length + " QCM, " + pluriel(c.situations.length, "situation") + (nbJeux ? ", " + pluriel(nbJeux, "jeu", "jeux") : "") })),
+        el("span", { class: "ch-pct" }, el("b", { text: k.pct + " %" }), barre(k.fait, k.total, "mini"))));
   }
   function listeParTheme() {
     var themes = [];
@@ -109,60 +129,84 @@
         el("ul", { class: "ch-list" }, CH.filter(function (c) { return c.theme === t; }).map(ligneChapitre)));
     });
   }
-  function barre(valeur, total) {
-    var pct = total ? Math.round(valeur / total * 100) : 0;
-    var i = el("i"); i.style.width = pct + "%";
-    return el("div", { class: "bar", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": String(total), "aria-valuenow": String(valeur) }, i);
+  /* Un jeu = une affiche entièrement cliquable : image de fond, gros titre, une phrase, bouton « Jouer ». */
+  function carteJeu(j, c, nouveau) {
+    var fini = jeuTermine(j);
+    return el("a", { class: "poster c-" + (j.couleur || "teal"), href: j.lien,
+        onclick: function (e) { if (window.SGN_OUVRIR_JEU && window.SGN_OUVRIR_JEU(j)) { e.preventDefault(); } } },
+      j.affiche ? el("img", { class: "poster-img", src: j.affiche, alt: "" }) : null,
+      el("span", { class: "poster-body" },
+        el("span", { class: "poster-tags" },
+          el("span", { class: "pill", text: "Chapitre " + c.id }),
+          nouveau ? el("span", { class: "pill pill-new", text: "nouveau" }) : null,
+          fini ? el("span", { class: "pill pill-ok", text: "terminé" }) : null),
+        el("span", { class: "poster-title", text: j.titre }),
+        el("span", { class: "poster-text", text: j.accroche }),
+        el("span", { class: "btn poster-btn", text: fini ? "Rejouer" : "Jouer" })));
+  }
+  function tousLesJeux() {
+    var jeux = [];
+    CH.forEach(function (c) { (c.jeux || []).forEach(function (j) { jeux.push({ j: j, c: c }); }); });
+    jeux.sort(function (a, b) { return String(b.j.ajout || "").localeCompare(String(a.j.ajout || "")); });
+    return jeux;
+  }
+  function estRecent(j) {
+    if (!j.ajout) { return false; }
+    var p = String(j.ajout).split("-"), d = new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]));
+    return (new Date() - d) / 86400000 < 30;
   }
 
   /* ---------- Page : accueil ---------- */
-  var actionEnAttente = null;
-
   function pageAccueil() {
     var enCours = chapitre(CFG.chapitreEnCours) || CH[CH.length - 1];
-    var nbCartes = 0, nbQ = 0, nbS = 0;
-    CH.forEach(function (c) { nbCartes += c.cartes.length; nbQ += c.qcm.length; nbS += c.situations.length; });
-    var su = nbMaitrises();
+    var nbCartes = 0, nbQ = 0, nbS = 0, fait = 0, total = 0;
+    CH.forEach(function (c) { var k = compte(c); nbCartes += c.cartes.length; nbQ += c.qcm.length; nbS += c.situations.length; fait += k.fait; total += k.total; });
+    var ev = evaluation(), jeux = tousLesJeux();
+    var motsTitre = String(CFG.titre || "SGN").split(" "), dernierMot = motsTitre.pop();
+    var pct = total ? Math.round(fait / total * 100) : 0;
 
     return [
       el("section", null,
-        el("p", { class: "tag", text: "Première STMG, " + (CFG.matiere || "").toLowerCase() }),
-        el("h1", { class: "display" }, (CFG.titre || "SGN") + " ", el("span", { class: "marker", text: CFG.classe || "" })),
-        el("p", { class: "lead", text: "Pour chaque chapitre, un parcours en 4 étapes : tu relis la synthèse, tu retiens les définitions, tu t’entraînes sur des QCM puis sur des situations. De quoi arriver prêt à l’évaluation." }),
+        el("p", { class: "tag", text: (CFG.classe || "") + ", " + (CFG.matiere || "").toLowerCase() }),
+        el("h1", { class: "display" }, motsTitre.length ? motsTitre.join(" ") + " " : null, el("span", { class: "marker", text: dernierMot })),
+        CFG.prof ? el("p", { class: "subtitle", text: CFG.prof }) : null,
+        el("p", { class: "lead", text: "Pour chaque chapitre : la synthèse, le lexique des définitions et un entraînement avec des flashcards, des QCM et des situations. Tu t’arrêtes quand tu veux, ta progression est gardée." }),
         el("div", { class: "actions" },
-          enCours ? el("a", { class: "btn btn-dark", href: "#/chapitre/" + enCours.id, text: "Réviser le chapitre " + enCours.id }) : null,
-          CFG.revision ? el("button", { class: "btn", type: "button", text: "Quiz éclair, 10 questions", onclick: function () { actionEnAttente = "eclair"; location.hash = "#/revision"; } }) : null),
+          enCours ? el("a", { class: "btn btn-dark", href: "#/chapitre/" + enCours.id, text: "Réviser le chapitre " + enCours.id }) : null),
         el("div", { class: "stats" },
           el("div", { class: "stat" }, el("b", { text: String(CH.length) }), el("span", { text: CH.length > 1 ? "chapitres" : "chapitre" })),
-          el("div", { class: "stat" }, el("b", { text: String(nbCartes) }), el("span", { text: "cartes de définitions" })),
+          el("div", { class: "stat" }, el("b", { text: String(nbCartes) }), el("span", { text: "flashcards" })),
           el("div", { class: "stat" }, el("b", { text: String(nbQ) }), el("span", { text: "questions de QCM" })),
           el("div", { class: "stat" }, el("b", { text: String(nbS) }), el("span", { text: "situations" })))),
 
-      enCours ? el("section", null,
-        el("h2", { class: "h2", text: "Le chapitre en cours" }),
-        el("div", { class: "card card-coral" },
-          el("h3", { text: "Chapitre " + enCours.id + " : " + enCours.titre }),
-          el("p", { class: "soft", text: enCours.question }),
+      ev ? el("section", null,
+        el("h2", { class: "h2", text: "Prochaine évaluation" }),
+        el("div", { class: "card eval" },
+          el("p", { class: "eval-date" }, el("strong", { text: ev.texte.charAt(0).toUpperCase() + ev.texte.slice(1) }), el("span", { class: "pill", text: ev.delai })),
+          el("p", { class: "eval-ch", text: "Chapitre " + ev.chapitre.id + " : " + ev.chapitre.titre }),
           el("div", { class: "actions" },
-            el("a", { class: "btn btn-dark", href: "#/chapitre/" + enCours.id, text: "Ouvrir le chapitre " + enCours.id })))) : null,
+            el("a", { class: "btn btn-dark", href: "#/chapitre/" + ev.chapitre.id + "/entrainement", text: "M’entraîner sur le chapitre " + ev.chapitre.id })))) : null,
 
       el("section", null,
         el("h2", { class: "h2", text: "Ta progression" }),
         el("div", { class: "card" },
           el("div", { class: "row-between" },
-            el("strong", { text: su + " chapitre" + (su > 1 ? "s" : "") + " sur " + CH.length + " maîtrisé" + (su > 1 ? "s" : "") }),
-            el("span", { class: "soft", text: "Coche « Su » dans chaque chapitre" })),
-          barre(su, CH.length))),
-
-      el("section", null,
-        el("h2", { class: "h2", text: "Les chapitres" }),
+            el("strong", { text: pct + " % validé sur les " + pluriel(CH.length, "chapitre") }),
+            el("span", { class: "soft", text: fait + " sur " + total + " flashcards et questions" })),
+          barre(fait, total)),
         listeParTheme()),
 
+      jeux.length ? el("section", null,
+        el("h2", { class: "h2", text: "Les jeux" }),
+        el("div", { class: "games" }, jeux.map(function (x, i) { return carteJeu(x.j, x.c, i === 0 && estRecent(x.j)); }))) : null,
+
       el("section", null,
-        el("h2", { class: "h2", text: "Le parcours en 4 étapes" }),
-        el("div", { class: "grid-4" }, ETAPES.map(function (e) {
-          return el("div", { class: "card step-card" }, el("h3", { text: e.n + ". " + e.nom }), el("p", { text: e.quoi }));
-        })))
+        el("h2", { class: "h2", text: "Dans chaque chapitre" }),
+        el("div", { class: "grid-4" },
+          el("div", { class: "card step-card" }, el("h3", { text: "Synthèse" }), el("p", { text: "La synthèse du cours, telle que tu l’as en classe." })),
+          el("div", { class: "card step-card" }, el("h3", { text: "Lexique" }), el("p", { text: "Toutes les définitions à connaître, une par notion." })),
+          el("div", { class: "card step-card" }, el("h3", { text: "Entraînement" }), el("p", { text: "Flashcards, QCM et situations. Chaque bonne réponse est validée." })),
+          el("div", { class: "card step-card" }, el("h3", { text: "Jeux" }), el("p", { text: "Quand le chapitre en a un : une mise en situation à jouer." }))))
     ];
   }
 
@@ -170,12 +214,12 @@
   function pageChapitres() {
     return [
       el("h1", { class: "title", text: "Les chapitres" }),
-      el("p", { class: "lead soft", text: pluriel(CH.length, "chapitre ouvert", "chapitres ouverts") + ". Les suivants arrivent au fil de l’année. Les trois points à droite : lu, su, revu." }),
+      el("p", { class: "lead soft", text: pluriel(CH.length, "chapitre ouvert", "chapitres ouverts") + ". Les suivants arrivent au fil de l’année. À droite : ce que tu as déjà validé." }),
       listeParTheme()
     ];
   }
 
-  /* ---------- Synthèse ---------- */
+  /* ---------- Onglet : synthèse ---------- */
   function tableau(b) {
     var deux = b.head.length <= 2;
     var thead = el("thead", null, el("tr", null, b.head.map(function (h) { return el("th", { scope: "col", html: h }); })));
@@ -197,7 +241,6 @@
         : el("p", { class: "def", html: b.html });
       case "conclusion": return el("p", { class: "keep" }, el("span", { class: "keep-label", text: "Conclusion" }), el("span", { html: b.html }));
       case "ex": return el("p", { class: "ex" }, el("span", { class: "ex-label", text: "Exemple" }), el("span", { html: b.html }));
-      case "retenir": return el("p", { class: "keep" }, el("span", { class: "keep-label", text: "À retenir" }), el("span", { html: b.html }));
       case "flow": return el("div", { class: "flow" + (b.sansFleche ? " no-arrow" : "") },
         b.titre ? el("p", { class: "flow-title", text: b.titre }) : null,
         el("ol", null, b.etapes.map(function (e) { return el("li", null, el("span", { text: e })); })));
@@ -205,40 +248,66 @@
         b.titre ? el("p", { class: "list-title", text: b.titre }) : null,
         el("ul", { class: "plain-list" }, b.items.map(function (i) { return el("li", { html: i }); })));
       case "table": return tableau(b);
-      case "img": return el("figure", { class: "figure" },
-        b.legende ? el("figcaption", { text: b.legende }) : null,
-        b.src.indexOf("data:") === 0
-          ? el("img", { src: b.src, alt: b.alt || "" })
-          : el("a", { href: b.src, target: "_blank", rel: "noopener", "aria-label": "Ouvrir l’image en grand" }, el("img", { src: b.src, alt: b.alt || "", loading: "lazy" })));
       default: return null;
     }
   }
-  function vocabulaire(c) {
-    var sues = prog(c.id).cartes;
-    return el("dl", { class: "vocab" }, c.cartes.map(function (k, i) {
-      return el("div", { class: sues.indexOf(i) >= 0 ? "known" : "" }, el("dt", { text: k.terme }), el("dd", { text: k.def }));
-    }));
+  function suite(c, onglet, texte) {
+    return el("div", { class: "next" }, el("a", { class: "btn btn-dark", href: "#/chapitre/" + c.id + "/" + onglet, text: texte }));
   }
-  function etapeSynthese(c) {
-    return el("div", { class: "syn" },
-      c.synthese.map(bloc),
-      suite(c, "cartes", "Étape suivante : les cartes de définitions"));
-  }
-  function suite(c, etape, texte) {
-    return el("div", { class: "next" }, el("a", { class: "btn btn-dark", href: "#/chapitre/" + c.id + "/" + etape, text: texte }));
+  function ongletSynthese(c) {
+    return el("div", null,
+      el("div", { class: "syn" },
+        c.intro ? el("div", { class: "intro", text: c.intro }) : null,
+        c.synthese.map(bloc)),
+      suite(c, "lexique", "Continuer avec le lexique"));
   }
 
-  /* ---------- Cartes à retourner ---------- */
-  function lancerCartes(cont, items, opts) {
-    opts = opts || {};
-    var fin = opts.fin;
-    var ordre = melanger(items), pos = 0, sues = 0, aRevoir = [];
-    var COULEURS = ["coral", "sun", "teal"];
-    var mouvement = !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  /* ---------- Onglet : lexique ---------- */
+  function ongletLexique(c) {
+    var sues = prog(c.id).cartes;
+    var fiches = c.cartes.map(function (k, i) {
+      return { k: k, n: el("div", { class: sues.indexOf(i) >= 0 ? "known" : "" }, el("dt", { text: k.terme }), el("dd", { text: k.def })) };
+    });
+    var liste = el("dl", { class: "vocab" }, fiches.map(function (f) { return f.n; }));
+    var vide = el("p", { class: "soft", hidden: true, text: "Aucune définition ne correspond." });
+    function norm(s) { return s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); }
+    var champ = el("input", { class: "search", type: "search", placeholder: "Cherche un mot du chapitre", "aria-label": "Chercher dans le lexique",
+      oninput: function () {
+        var q = norm(champ.value.trim()), n = 0;
+        fiches.forEach(function (f) {
+          var ok = !q || norm(f.k.terme + " " + f.k.def).indexOf(q) >= 0;
+          f.n.hidden = !ok; if (ok) { n++; }
+        });
+        vide.hidden = n > 0;
+      } });
+    return el("div", { class: "syn" },
+      el("p", { class: "lead", text: pluriel(c.cartes.length, "définition") + " à connaître pour ce chapitre." }),
+      c.cartes.length > 8 ? champ : null,
+      liste, vide,
+      suite(c, "entrainement", "M’entraîner avec les flashcards"));
+  }
+
+  /* ---------- Onglet : entraînement ---------- */
+  var COULEURS = ["coral", "sun", "teal"];
+  var surProgression = null; /* met à jour la jauge du chapitre affichée en haut de page */
+  var mouvement = !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+
+  /* Flashcards : d'abord celles qui ne sont pas encore sues. L'élève s'arrête quand il veut. */
+  function lancerFlashcards(cont, c, retour) {
+    var p = prog(c.id), tous = c.cartes.map(function (k, i) { return i; });
+    var file = melanger(tous.filter(function (i) { return p.cartes.indexOf(i) < 0; }))
+      .concat(melanger(tous.filter(function (i) { return p.cartes.indexOf(i) >= 0; })));
+    var pos = 0, sues = 0;
+    function jauge() {
+      var k = compte(c);
+      return el("div", { class: "run-gauge" }, el("div", { class: "q-meta" },
+        el("span", { text: k.cartes + " sur " + c.cartes.length + " sues" }),
+        el("button", { class: "link-btn", type: "button", text: "J’arrête là", onclick: fin })), barre(k.cartes, c.cartes.length));
+    }
     function carte() {
       vider(cont);
-      if (pos >= ordre.length) { bilan(); return; }
-      var it = ordre[pos], c = chapitre(it.ch), k = c.cartes[it.i], retournee = false, repondu = false;
+      if (pos >= file.length) { fin(); return; }
+      var i = file[pos], k = c.cartes[i], retournee = false, repondu = false;
       var recto = el("span", { class: "flash-face flash-front" },
         el("span", { class: "flash-corner", text: "Chapitre " + c.id }),
         el("span", { class: "flash-side", text: "Terme" }),
@@ -251,13 +320,13 @@
         el("span", { class: "flash-def", text: k.def }));
       var face = el("button", { class: "flash", type: "button", "aria-pressed": "false" }, el("span", { class: "flash-inner" }, recto, verso));
       var annonce = el("p", { class: "sr-only", "aria-live": "polite" });
-      var reste = ordre.length - pos - 1;
-      var pile = el("div", { class: "flash-stack c-" + COULEURS[it.i % 3] + (reste > 0 ? " has-more" : "") }, face);
+      var pile = el("div", { class: "flash-stack c-" + COULEURS[i % 3] + (file.length - pos - 1 > 0 ? " has-more" : "") }, face);
       function repondre(su) {
         if (repondu) { return; }
         repondu = true;
-        if (su) { ajoute(prog(it.ch).cartes, it.i); sues++; } else { retire(prog(it.ch).cartes, it.i); aRevoir.push(it); }
+        if (su) { ajoute(p.cartes, i); sues++; } else { retire(p.cartes, i); }
         sauver(); pos++;
+        if (surProgression) { surProgression(); }
         if (!mouvement) { carte(); return; }
         pile.classList.add(su ? "leave-right" : "leave-left");
         window.setTimeout(carte, 240);
@@ -275,70 +344,50 @@
         annonce.textContent = retournee ? "Définition : " + k.def : "";
         boutons.style.visibility = "visible";
       });
-      cont.appendChild(el("div", { class: "deck" },
-        el("div", { class: "q-meta" }, el("span", { text: "Carte " + (pos + 1) + " sur " + ordre.length + ", chapitre " + c.id }),
-          opts.retour ? el("button", { class: "link-btn", type: "button", text: "Arrêter", onclick: opts.retour }) : null),
-        barre(pos, ordre.length), pile, annonce, boutons));
+      cont.appendChild(el("div", { class: "deck" }, jauge(), pile, annonce, boutons));
       remonter(cont);
       face.focus({ preventScroll: true });
     }
-    function bilan() {
+    function fin() {
+      vider(cont);
+      var k = compte(c);
       cont.appendChild(el("div", { class: "deck" },
-        el("p", { class: "soft", text: "Paquet terminé" }),
-        el("p", { class: "score", text: sues + " / " + ordre.length }),
-        el("p", { class: "lead", text: sues === ordre.length ? "Tu sais toutes les cartes de ce paquet." : pluriel(aRevoir.length, "carte") + " à revoir." }),
+        el("h2", { class: "syn-h3", text: pos === 0 ? "Flashcards" : pluriel(pos, "carte vue", "cartes vues") + ", dont " + pluriel(sues, "sue") }),
+        el("p", { class: "score", text: k.cartes + " / " + c.cartes.length }),
+        el("p", { class: "lead", text: k.cartes === c.cartes.length ? "Tu sais toutes les définitions du chapitre." : "Flashcards sues sur ce chapitre. Les autres reviendront en premier la prochaine fois." }),
         el("div", { class: "actions" },
-          aRevoir.length ? el("button", { class: "btn btn-dark", type: "button", text: "Revoir les " + pluriel(aRevoir.length, "carte") + " à revoir", onclick: function () { lancerCartes(cont, aRevoir, opts); } }) : null,
-          el("button", { class: "btn", type: "button", text: "Recommencer le paquet", onclick: function () { lancerCartes(cont, items, opts); } }),
-          opts.retour ? el("button", { class: "btn", type: "button", text: "Retour", onclick: opts.retour }) : null,
-          fin ? fin() : null)));
+          pos < file.length ? el("button", { class: "btn btn-dark", type: "button", text: "Continuer", onclick: carte }) : null,
+          el("button", { class: "btn", type: "button", text: "Retour à l’entraînement", onclick: retour }))));
       remonter(cont);
     }
     carte();
   }
 
-  function etapeCartes(c) {
-    var zone = el("div");
-    var mode = "cartes";
-    var seg = el("div", { class: "seg", role: "group", "aria-label": "Affichage" });
-    function tous() { return c.cartes.map(function (k, i) { return { ch: c.id, i: i }; }); }
-    function accueilCartes() {
-      vider(zone);
-      var sues = prog(c.id).cartes;
-      var restantes = tous().filter(function (it) { return sues.indexOf(it.i) < 0; });
-      var opts = { retour: accueilCartes };
-      zone.appendChild(el("div", { class: "deck" },
-        el("p", { class: "lead", text: pluriel(c.cartes.length, "terme") + " à connaître. Devine la définition, retourne la carte, puis dis si tu la sais." }),
-        el("div", { class: "row-between" }, el("strong", { text: pluriel(sues.length, "carte sue", "cartes sues") + " sur " + c.cartes.length })),
-        barre(sues.length, c.cartes.length),
-        el("div", { class: "actions" },
-          el("button", { class: "btn btn-dark", type: "button", text: "Toutes les cartes (" + c.cartes.length + ")", onclick: function () { lancerCartes(zone, tous(), opts); } }),
-          el("button", { class: "btn", type: "button", disabled: restantes.length === 0 || restantes.length === c.cartes.length, text: "Celles que je ne sais pas encore (" + restantes.length + ")", onclick: function () { lancerCartes(zone, restantes, opts); } }))));
+  /* QCM et situations : d'abord les questions jamais vues, puis les ratées, puis les validées.
+     Pas de longueur imposée : chaque bonne réponse est validée tout de suite. */
+  function lancerQuestions(cont, c, type, retour) {
+    var p = prog(c.id), tous = c[type].map(function (q, i) { return i; });
+    var nom = type === "qcm" ? "question" : "situation";
+    var file = melanger(tous.filter(function (i) { return p.vu[type].indexOf(i) < 0; }))
+      .concat(melanger(tous.filter(function (i) { return p.vu[type].indexOf(i) >= 0 && p.ok[type].indexOf(i) < 0; })))
+      .concat(melanger(tous.filter(function (i) { return p.ok[type].indexOf(i) >= 0; })));
+    var pos = 0, faites = 0, justes = 0, ratees = [];
+    function jauge() {
+      var n = compte(c)[type];
+      return el("div", { class: "run-gauge" }, el("div", { class: "q-meta" },
+        el("span", { text: n + " sur " + c[type].length + " validées" }),
+        el("button", { class: "link-btn", type: "button", text: "J’arrête là", onclick: fin })), barre(n, c[type].length));
     }
-    function glossaire() { vider(zone); zone.appendChild(vocabulaire(c)); }
-    function dessinerSeg() {
-      vider(seg);
-      [["cartes", "Cartes"], ["glossaire", "Glossaire"]].forEach(function (m) {
-        seg.appendChild(el("button", { type: "button", "aria-pressed": String(mode === m[0]), text: m[1], onclick: function () { mode = m[0]; dessinerSeg(); if (mode === "cartes") { accueilCartes(); } else { glossaire(); } } }));
-      });
-    }
-    dessinerSeg(); accueilCartes();
-    return el("div", null, seg, zone, suite(c, "qcm", "Étape suivante : les QCM"));
-  }
-
-  /* ---------- Quiz (QCM et situations) ---------- */
-  function lancerQuiz(cont, items, opts) {
-    opts = opts || {};
-    var pos = 0, bonnes = 0, ratees = [];
     function question() {
       vider(cont);
-      if (pos >= items.length) { bilan(); return; }
-      var it = items[pos], c = chapitre(it.ch), d = c[it.type][it.i];
-      var ordre = d.c.map(function (x, i) { return i; });
-      if (d.c.length > 3) { ordre = melanger(ordre); }
+      if (pos >= file.length) { fin(); return; }
+      var i = file[pos], d = c[type][i];
+      var ordre = d.c.map(function (x, n) { return n; });
+      if (d.c.length > 2) { ordre = melanger(ordre); }
       var lettres = ["A", "B", "C", "D", "E"];
-      var retour = el("div", { "aria-live": "polite" });
+      var retourZone = el("div", { "aria-live": "polite" });
       var liste = el("div", { class: "choices" });
+      var zoneJauge = el("div", null, jauge());
       var boutons = ordre.map(function (idx, n) {
         var b = el("button", { class: "choice", type: "button" }, el("kbd", { "aria-hidden": "true", text: lettres[n] }), el("span", { text: d.c[idx] }));
         b.addEventListener("click", function () { repondre(idx, b); });
@@ -346,164 +395,132 @@
         return { idx: idx, b: b };
       });
       function repondre(idx, bouton) {
-        var juste = idx === d.r, p = prog(it.ch);
+        var juste = idx === d.r;
         boutons.forEach(function (x) { x.b.disabled = true; if (x.idx === d.r) { x.b.classList.add("is-ok"); } });
-        if (juste) { bonnes++; retire(p.err[it.type], it.i); }
-        else { bouton.classList.add("is-ko"); ratees.push(it); ajoute(p.err[it.type], it.i); }
-        sauver();
-        var dernier = pos === items.length - 1;
-        var suivant = el("button", { class: "btn btn-dark", type: "button", text: dernier ? "Voir mon score" : "Question suivante", onclick: function () { pos++; question(); } });
-        retour.appendChild(el("div", { class: "feedback " + (juste ? "ok" : "ko") },
-          el("b", { text: juste ? "Bonne réponse" : "Ce n’est pas ça" }),
+        ajoute(p.vu[type], i); faites++;
+        if (juste) { justes++; ajoute(p.ok[type], i); }
+        else { bouton.classList.add("is-ko"); ratees.push(i); retire(p.ok[type], i); }
+        sauver(); pos++;
+        if (surProgression) { surProgression(); }
+        vider(zoneJauge).appendChild(jauge());
+        var suivant = el("button", { class: "btn btn-dark", type: "button", text: pos >= file.length ? "Voir mon bilan" : (type === "qcm" ? "Question suivante" : "Situation suivante"), onclick: question });
+        retourZone.appendChild(el("div", { class: "feedback " + (juste ? "ok" : "ko") },
+          el("b", { text: juste ? "Bonne réponse, c’est validé" : "Ce n’est pas ça" }),
           el("span", { text: (juste ? "" : "La bonne réponse : " + d.c[d.r] + ". ") + d.e })));
-        retour.appendChild(suivant);
+        retourZone.appendChild(el("div", { class: "actions" }, suivant,
+          pos < file.length ? el("button", { class: "btn", type: "button", text: "J’arrête là", onclick: fin }) : null));
         suivant.focus({ preventScroll: true });
       }
       cont.appendChild(el("div", { class: "quiz" },
-        el("div", { class: "q-meta" }, el("span", { text: "Question " + (pos + 1) + " sur " + items.length + ", chapitre " + c.id }),
-          opts.retour ? el("button", { class: "link-btn", type: "button", text: "Arrêter", onclick: opts.retour }) : null),
-        barre(pos, items.length),
+        zoneJauge,
         d.s ? el("p", { class: "scenario" }, el("span", { class: "ex-label", text: "Situation" }), d.s) : null,
         el("h2", { class: "q-text", text: d.q }),
-        liste, retour));
+        liste, retourZone));
       remonter(cont);
-      if (pos > 0) { boutons[0].b.focus({ preventScroll: true }); }
+      if (faites > 0) { boutons[0].b.focus({ preventScroll: true }); }
     }
-    function bilan() {
-      var total = items.length, pct = total ? bonnes / total : 0;
-      if (opts.enregistrer) { opts.enregistrer(bonnes, total); }
-      var message = pct === 1 ? "Sans faute. Tu maîtrises ces questions."
-        : pct >= 0.8 ? "Très bien. Reprends juste les questions ratées."
-        : pct >= 0.5 ? "C’est en bonne voie. Relis les explications, puis refais tes erreurs."
-        : "Relis la synthèse et les cartes, puis recommence.";
+    function fin() {
+      vider(cont);
+      var n = compte(c)[type], total = c[type].length;
       cont.appendChild(el("div", { class: "quiz" },
-        el("p", { class: "soft", text: "Ton score" }),
-        el("p", { class: "score", text: bonnes + " / " + total }),
-        el("p", { class: "lead", text: message }),
+        el("h2", { class: "syn-h3", text: faites === 0 ? (type === "qcm" ? "QCM" : "Situations") : "Cette fois : " + pluriel(faites, nom) + ", " + pluriel(justes, "bonne réponse", "bonnes réponses") }),
+        el("p", { class: "score", text: n + " / " + total }),
+        el("p", { class: "lead", text: n === total ? "Tu as tout validé sur cette activité." : (type === "qcm" ? "Questions validées" : "Situations validées") + " sur ce chapitre. Les autres reviendront en premier la prochaine fois." }),
         ratees.length ? el("div", null,
           el("h3", { class: "syn-h3", text: "À revoir" }),
-          el("ul", { class: "review" }, ratees.map(function (it) {
-            var d = chapitre(it.ch)[it.type][it.i];
+          el("ul", { class: "review" }, ratees.filter(function (x, n2, a) { return a.indexOf(x) === n2; }).map(function (i) {
+            var d = c[type][i];
             return el("li", null, el("b", { text: (d.s ? d.s + " " : "") + d.q }), el("span", { text: "Réponse : " + d.c[d.r] + ". " + d.e }));
           }))) : null,
         el("div", { class: "actions" },
-          ratees.length ? el("button", { class: "btn btn-dark", type: "button", text: "Refaire mes " + pluriel(ratees.length, "erreur"), onclick: function () { lancerQuiz(cont, melanger(ratees), opts); } }) : null,
-          el("button", { class: "btn", type: "button", text: "Retour", onclick: function () { if (opts.retour) { opts.retour(); } } }),
-          opts.fin ? opts.fin() : null)));
+          pos < file.length ? el("button", { class: "btn btn-dark", type: "button", text: "Continuer", onclick: question }) : null,
+          el("button", { class: "btn", type: "button", text: "Retour à l’entraînement", onclick: retour }))));
       remonter(cont);
     }
     question();
   }
 
-  function etapeQuiz(c, type) {
+  function ongletEntrainement(c, majEntete) {
     var zone = el("div");
-    var estQcm = type === "qcm";
-    function tous() { return c[type].map(function (q, i) { return { ch: c.id, type: type, i: i }; }); }
-    function accueilQuiz() {
+    function menu() {
       vider(zone);
-      var p = prog(c.id), err = p.err[type].filter(function (i) { return c[type][i]; });
-      var total = c[type].length, sc = p.score[type];
-      var opts = {
-        retour: accueilQuiz,
-        enregistrer: function (ok, n) { p.score[type] = { ok: ok, n: n }; sauver(); },
-        fin: function () {
-          return estQcm ? el("a", { class: "btn", href: "#/chapitre/" + c.id + "/situations", text: "Étape suivante : les situations" })
-            : el("a", { class: "btn", href: "#/chapitres", text: "Tous les chapitres" });
-        }
-      };
-      zone.appendChild(el("div", { class: "quiz" },
-        el("p", { class: "lead", text: estQcm
-          ? pluriel(total, "question") + " sur le chapitre. Chaque réponse est expliquée."
-          : pluriel(total, "situation") + " à analyser, comme dans une étude de documents. Chaque réponse est expliquée." }),
-        sc ? el("p", { class: "soft" }, "Ton dernier score : ", el("strong", { text: sc.ok + " / " + sc.n })) : null,
-        el("div", { class: "actions" },
-          total > 10 ? el("button", { class: "btn btn-dark", type: "button", text: "10 questions au hasard", onclick: function () { lancerQuiz(zone, melanger(tous()).slice(0, 10), opts); } }) : null,
-          el("button", { class: "btn" + (total > 10 ? "" : " btn-dark"), type: "button", text: (estQcm ? "Toutes les questions (" : "Toutes les situations (") + total + ")", onclick: function () { lancerQuiz(zone, melanger(tous()), opts); } }),
-          el("button", { class: "btn btn-coral", type: "button", disabled: err.length === 0, text: "Mes erreurs (" + err.length + ")", onclick: function () { lancerQuiz(zone, melanger(err.map(function (i) { return { ch: c.id, type: type, i: i }; })), opts); } }))));
+      majEntete();
+      var k = compte(c);
+      function activite(titre, quoi, fait, total, mot, lancer) {
+        return el("div", { class: "card act" },
+          el("div", { class: "act-txt" }, el("h3", { text: titre }), el("p", { class: "soft", text: quoi })),
+          el("div", { class: "act-gauge" }, el("strong", { text: fait + " / " + total + " " + mot }), barre(fait, total)),
+          el("button", { class: "btn btn-dark", type: "button", text: fait === 0 ? "Commencer" : fait === total ? "Refaire" : "Continuer", onclick: lancer }));
+      }
+      zone.appendChild(el("div", { class: "acts" },
+        el("p", { class: "lead", text: "Tu t’arrêtes quand tu veux : chaque bonne réponse est validée et gardée pour la prochaine fois." }),
+        activite("Flashcards", "Devine la définition, puis retourne la carte.", k.cartes, c.cartes.length, "sues", function () { lancerFlashcards(zone, c, menu); }),
+        activite("QCM", "Des questions de cours, corrigées une par une.", k.qcm, c.qcm.length, "validées", function () { lancerQuestions(zone, c, "qcm", menu); }),
+        activite("Situations", "Des mini-cas où tu appliques le cours.", k.situations, c.situations.length, "validées", function () { lancerQuestions(zone, c, "situations", menu); })));
+      remonter(zone);
     }
-    accueilQuiz();
-    return el("div", null, zone);
+    menu();
+    return zone;
+  }
+
+  /* ---------- Onglet : jeux ---------- */
+  function ongletJeux(c) {
+    return el("div", null,
+      el("p", { class: "lead", text: "Une autre façon de revoir le chapitre. Les jeux ne comptent pas dans ta jauge." }),
+      el("div", { class: "games" }, (c.jeux || []).map(function (j) { return carteJeu(j, c, false); })));
   }
 
   /* ---------- Page : un chapitre ---------- */
-  function pageChapitre(c, etapeId) {
-    var etape = ETAPES.filter(function (e) { return e.id === etapeId; })[0] || ETAPES[0];
-    var p = prog(c.id);
-    var marques = el("div", { class: "marks", role: "group", "aria-label": "Où j’en suis sur ce chapitre" });
-    function dessinerMarques() {
-      vider(marques);
-      [["lu", "📖", "Lu"], ["su", "✅", "Su"], ["revu", "🔁", "Revu"]].forEach(function (m) {
-        marques.appendChild(el("button", { class: "mark", type: "button", "aria-pressed": String(!!p.marks[m[0]]), onclick: function () { p.marks[m[0]] = !p.marks[m[0]]; sauver(); dessinerMarques(); } },
-          el("span", { "aria-hidden": "true", text: m[1] }), m[2]));
-      });
-    }
-    dessinerMarques();
+  function pageChapitre(c, ongletId) {
+    var anciens = { cartes: "entrainement", qcm: "entrainement", situations: "entrainement" };
+    ongletId = anciens[ongletId] || ongletId;
+    var onglets = [["synthese", "Synthèse"], ["lexique", "Lexique"], ["entrainement", "Entraînement"]];
+    if (c.jeux && c.jeux.length) { onglets.push(["jeux", "Jeux"]); }
+    var actif = onglets.filter(function (o) { return o[0] === ongletId; })[0] || onglets[0];
+    var ev = evaluation();
 
-    var contenu = etape.id === "synthese" ? etapeSynthese(c)
-      : etape.id === "cartes" ? etapeCartes(c)
-      : etapeQuiz(c, etape.id);
+    var entete = el("div", { class: "ch-gauge" });
+    function majEntete() {
+      var k = compte(c);
+      vider(entete);
+      entete.appendChild(el("div", { class: "row-between" },
+        el("strong", { text: "Chapitre validé à " + k.pct + " %" }),
+        el("span", { class: "soft", text: k.fait + " sur " + k.total + " flashcards et questions" })));
+      entete.appendChild(barre(k.fait, k.total));
+    }
+    majEntete();
+    surProgression = majEntete;
+
+    var contenu = actif[0] === "lexique" ? ongletLexique(c)
+      : actif[0] === "entrainement" ? ongletEntrainement(c, majEntete)
+      : actif[0] === "jeux" ? ongletJeux(c)
+      : ongletSynthese(c);
 
     return [
       el("a", { class: "btn back", href: "#/chapitres", text: "← Tous les chapitres" }),
       el("p", { class: "crumbs", text: "Thème " + c.theme + " : " + nomTheme(c.theme) + " › Chapitre " + c.id }),
       el("h1", { class: "title", text: c.titre }),
       el("p", { class: "question", text: c.question }),
-      c.intro ? el("div", { class: "intro", text: c.intro }) : null,
-      marques,
-      el("nav", { class: "steps", id: "etapes", "aria-label": "Les 4 étapes du chapitre" }, ETAPES.map(function (e) {
-        return el("a", { href: "#/chapitre/" + c.id + "/" + e.id, "aria-current": e.id === etape.id ? "step" : null }, el("b", { text: String(e.n) }), e.nom);
+      ev && ev.chapitre.id === c.id ? el("p", { class: "tag eval-tag", text: "Évaluation " + ev.texte + ", " + ev.delai }) : null,
+      entete,
+      el("nav", { class: "tabs tabs-" + onglets.length, id: "onglets", "aria-label": "Les rubriques du chapitre" }, onglets.map(function (o) {
+        return el("a", { href: "#/chapitre/" + c.id + "/" + o[0], "aria-current": o[0] === actif[0] ? "page" : null, text: o[1] });
       })),
       contenu
     ];
-  }
-
-  /* ---------- Page : révision ---------- */
-  function pageRevision() {
-    var zone = el("div");
-    function toutesQuestions() {
-      var items = [];
-      CH.forEach(function (c) {
-        ["qcm", "situations"].forEach(function (type) { c[type].forEach(function (q, i) { items.push({ ch: c.id, type: type, i: i }); }); });
-      });
-      return items;
-    }
-    function toutesCartes() {
-      var items = [];
-      CH.forEach(function (c) { c.cartes.forEach(function (k, i) { items.push({ ch: c.id, i: i }); }); });
-      return items;
-    }
-    function accueilRevision() {
-      vider(zone);
-      var err = toutesErreurs(), cartes = toutesCartes();
-      var opts = { retour: accueilRevision };
-      zone.appendChild(el("div", null,
-        el("h1", { class: "title", text: "Révision" }),
-        el("p", { class: "lead soft", text: "Tous les chapitres ouverts, mélangés. Pratique avant une évaluation qui porte sur plusieurs chapitres." }),
-        el("div", { class: "actions" },
-          el("button", { class: "btn btn-dark", type: "button", text: "Quiz éclair, 10 questions", onclick: eclair }),
-          el("button", { class: "btn btn-coral", type: "button", disabled: err.length === 0, text: "Mes erreurs (" + err.length + ")", onclick: function () { lancerQuiz(zone, melanger(err), opts); } }),
-          el("button", { class: "btn", type: "button", text: "Toutes les cartes (" + cartes.length + ")", onclick: function () { lancerCartes(zone, cartes, opts); } })),
-        el("h2", { class: "h2", text: "Par chapitre" }),
-        listeParTheme()));
-      function eclair() { lancerQuiz(zone, melanger(toutesQuestions()).slice(0, 10), opts); }
-      if (actionEnAttente === "eclair") { actionEnAttente = null; eclair(); }
-    }
-    accueilRevision();
-    return [zone];
   }
 
   /* ---------- Navigation ---------- */
   var derniereCle = null;
   function afficher() {
     var parts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
-    var nav = "accueil", contenu, cle = parts[0] || "accueil";
-    if (parts[0] === "chapitres") { nav = "chapitres"; contenu = pageChapitres(); }
+    var nav = "accueil", contenu, cle = "accueil";
+    if (parts[0] === "chapitres") { nav = "chapitres"; cle = "chapitres"; contenu = pageChapitres(); }
     else if (parts[0] === "chapitre" && chapitre(Number(parts[1]))) {
       nav = "chapitres"; cle = "chapitre-" + parts[1];
       contenu = pageChapitre(chapitre(Number(parts[1])), parts[2]);
     }
-    else if (parts[0] === "revision" && CFG.revision) { nav = "revision"; contenu = pageRevision(); }
-    else { cle = "accueil"; contenu = pageAccueil(); }
+    else { contenu = pageAccueil(); }
 
     vider(app);
     contenu.forEach(function add(n) { if (Array.isArray(n)) { n.forEach(add); } else if (n) { app.appendChild(n); } });
@@ -511,14 +528,13 @@
     Array.prototype.forEach.call(document.querySelectorAll("[data-nav]"), function (a) {
       if (a.getAttribute("data-nav") === nav) { a.setAttribute("aria-current", "page"); } else { a.removeAttribute("aria-current"); }
     });
-    var titres = { accueil: "", chapitres: "Les chapitres", revision: "Révision" };
-    var c = parts[0] === "chapitre" ? chapitre(Number(parts[1])) : null;
-    var t = c ? "Chapitre " + c.id + " : " + c.titre : titres[nav];
+    var c = cle.indexOf("chapitre-") === 0 ? chapitre(Number(parts[1])) : null;
+    var t = c ? "Chapitre " + c.id + " : " + c.titre : (cle === "chapitres" ? "Les chapitres" : "");
     document.title = (t ? t + " | " : "") + (CFG.titre || "SGN") + " · " + (CFG.prof || "");
 
     if (cle !== derniereCle) { window.scrollTo(0, 0); }
-    else if (parts[0] === "chapitre") {
-      var e = document.getElementById("etapes");
+    else if (c) {
+      var e = document.getElementById("onglets");
       if (e && e.getBoundingClientRect().top < 0) { e.scrollIntoView(); }
     }
     derniereCle = cle;
@@ -540,18 +556,19 @@
   majTheme();
 
   document.getElementById("reset-btn").addEventListener("click", function () {
-    if (window.confirm("Effacer toute ta progression sur cet appareil (chapitres cochés, cartes sues, erreurs) ?")) {
+    if (window.confirm("Effacer toute ta progression sur cet appareil (flashcards sues, questions validées, jeux terminés) ?")) {
       store = {};
-      try { localStorage.removeItem(KEY); } catch (e) { /* stockage indisponible */ }
+      try {
+        localStorage.removeItem(KEY);
+        localStorage.removeItem("sgn-progression-v1");
+        CH.forEach(function (c) { (c.jeux || []).forEach(function (j) { localStorage.removeItem("sgn-jeu-" + j.id); }); });
+      } catch (e) { /* stockage indisponible */ }
       afficher();
     }
   });
 
-  if (CFG.revision) {
-    var lienRevision = document.querySelector('[data-nav="revision"]');
-    if (lienRevision) { lienRevision.hidden = false; }
-  }
-
+  /* Au retour d'un jeu (bouton Précédent du navigateur), la page est réaffichée pour montrer « terminé ». */
+  window.addEventListener("pageshow", function (e) { if (e.persisted) { afficher(); } });
   window.addEventListener("hashchange", afficher);
   if (!CH.length) { app.appendChild(el("p", { class: "lead", text: "Aucun chapitre n’est encore ouvert." })); }
   else { afficher(); }

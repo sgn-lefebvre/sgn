@@ -78,7 +78,9 @@ main.wrap { padding-block: clamp(28px, 5vw, 56px) 72px; min-height: 70vh; overfl
 /* ---------- En-tête ---------- */
 .top { position: sticky; top: 0; z-index: 20; background: var(--bg); border-bottom: 3px solid var(--ink); }
 .top-in { display: flex; align-items: center; gap: 12px; padding-block: 12px; }
-.logo { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; font-family: var(--display); font-weight: 800; font-size: 1.5rem; letter-spacing: -0.02em; white-space: nowrap; }
+.logo { display: inline-flex; flex-direction: column; align-items: flex-start; line-height: 1; text-decoration: none; font-family: var(--display); font-weight: 800; font-size: 1.5rem; letter-spacing: -0.02em; white-space: nowrap; }
+.logo-main { display: inline-flex; align-items: center; gap: 8px; }
+.logo-sub { display: block; font-family: var(--text); font-weight: 700; font-size: .78rem; letter-spacing: 0; color: var(--ink-soft); margin-top: 3px; }
 .logo-badge { background: var(--coral); color: var(--on-accent); border-radius: 8px; padding: 0 9px; line-height: 1.5; font-size: 1.05rem; }
 .nav { display: flex; gap: 4px; margin-inline: auto; }
 .nav a[hidden] { display: none; }
@@ -98,6 +100,7 @@ main.wrap { padding-block: clamp(28px, 5vw, 56px) 72px; min-height: 70vh; overfl
 
 /* ---------- Titres et textes ---------- */
 .display { font-size: clamp(3.2rem, 11vw, 7rem); letter-spacing: -0.04em; margin: 14px 0 22px; }
+.subtitle { font-family: var(--display); font-weight: 700; font-size: clamp(1.3rem, 3.4vw, 1.9rem); letter-spacing: -0.01em; margin: -8px 0 18px; }
 .marker { background: linear-gradient(transparent 46%, var(--sun) 46%); padding: 0 .08em; }
 :root[data-theme="dark"] .marker { background: linear-gradient(transparent 46%, #8A6420 46%); }
 .title { font-size: clamp(2.3rem, 7vw, 4.4rem); margin: 10px 0 22px; overflow-wrap: anywhere; hyphens: auto; }
@@ -148,26 +151,13 @@ main.wrap { padding-block: clamp(28px, 5vw, 56px) 72px; min-height: 70vh; overfl
 .ch-name { font-family: var(--display); font-weight: 700; font-size: 1.15rem; line-height: 1.25; flex: 1; }
 .ch-name small { display: block; font-family: var(--text); font-weight: 600; font-size: .9rem; color: var(--ink-soft); margin-top: 2px; }
 .pill { display: inline-block; background: var(--sun-soft); border-radius: 99px; padding: 1px 10px; font-family: var(--text); font-size: .82rem; font-weight: 700; margin-left: 8px; vertical-align: middle; white-space: nowrap; }
-.dots { display: flex; gap: 6px; flex: none; }
-.dots i { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); }
-.dots i.on { background: var(--coral); border-color: var(--coral); }
 
 /* ---------- Page chapitre ---------- */
 .back { min-height: 44px; padding: 8px 16px; font-size: 1rem; margin-bottom: 18px; }
 .crumbs { font-weight: 700; font-size: .98rem; color: var(--ink-soft); margin: 0; }
 .intro { background: var(--card); border: 3px solid var(--ink); border-left: 14px solid var(--coral); border-radius: var(--r-md); padding: 18px 22px; font-size: 1.12rem; margin-bottom: 18px; }
 .question { font-weight: 700; margin-bottom: 14px; }
-.marks { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 26px; }
-.mark { background: var(--card); border: 2px solid var(--line); border-radius: var(--r-md); padding: 8px 16px; font-family: var(--display); font-weight: 700; display: inline-flex; gap: 8px; align-items: center; }
-.mark[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
 
-.steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 28px; }
-.steps a { display: flex; align-items: center; gap: 10px; text-decoration: none; background: var(--card); border: 2px solid var(--line); border-radius: var(--r-md); padding: 10px 14px; font-family: var(--display); font-weight: 700; line-height: 1.15; }
-.steps a b { width: 30px; height: 30px; flex: none; border-radius: 50%; background: var(--bg); display: grid; place-items: center; font-size: .95rem; }
-.steps a:hover { border-color: var(--ink); }
-.steps a[aria-current="step"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
-.steps a[aria-current="step"] b { background: var(--coral); color: var(--on-accent); }
-@media (max-width: 720px) { .steps { grid-template-columns: repeat(2, 1fr); } }
 
 /* ---------- Synthèse ---------- */
 .syn { max-width: 900px; }
@@ -214,6 +204,66 @@ tbody th { font-weight: 700; }
 .vocab .known dt::after { content: "sue"; font-family: var(--text); font-size: .78rem; font-weight: 700; background: var(--ok-soft); color: var(--ok); border-radius: 99px; padding: 1px 10px; margin-left: 10px; vertical-align: middle; }
 
 .next { margin-top: 36px; padding-top: 24px; border-top: 2px solid var(--line); }
+
+/* ---------- Prochaine évaluation ---------- */
+.eval { border: 3px solid var(--ink); background: var(--sun-soft); }
+.eval-date { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 4px; margin-bottom: 6px; }
+.eval-date strong { font-family: var(--display); font-weight: 800; font-size: clamp(1.5rem, 4vw, 2.1rem); line-height: 1.1; letter-spacing: -0.02em; }
+.eval .pill { background: var(--ink); color: var(--bg); font-size: .9rem; padding: 2px 12px; }
+.eval-ch { font-weight: 700; margin-bottom: 0; }
+.eval .actions { margin-bottom: 0; }
+.pill-eval { background: var(--coral-soft); }
+.eval-tag { margin-bottom: 16px; }
+
+/* ---------- Onglets et jauges d'un chapitre ---------- */
+.ch-gauge { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px 18px; margin-bottom: 18px; }
+.ch-gauge .row-between { margin-bottom: 8px; }
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 30px; }
+.tabs.tabs-4 { grid-template-columns: repeat(4, 1fr); }
+.tabs a { display: flex; align-items: center; justify-content: center; text-align: center; text-decoration: none; background: var(--card); border: 2px solid var(--line); border-radius: var(--r-md); padding: 12px 10px; font-family: var(--display); font-weight: 700; font-size: 1.08rem; line-height: 1.15; }
+.tabs a:hover { border-color: var(--ink); }
+.tabs a[aria-current="page"] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+@media (max-width: 560px) { .tabs.tabs-4 { grid-template-columns: repeat(2, 1fr); } .tabs a { font-size: .98rem; padding: 12px 6px; } }
+.ch-pct { flex: none; width: 92px; text-align: right; }
+.ch-pct b { display: block; font-family: var(--display); font-weight: 800; font-size: 1.05rem; line-height: 1.2; margin-bottom: 4px; }
+.bar.mini { height: 8px; border-width: 1px; }
+@media (max-width: 560px) { .ch-pct { width: 58px; } }
+
+/* ---------- Lexique ---------- */
+.search { display: block; width: 100%; font: inherit; color: var(--ink); background: var(--card); border: 2px solid var(--line); border-radius: var(--r-md); padding: 14px 18px; margin-bottom: 16px; }
+.search::placeholder { color: var(--ink-soft); }
+.vocab [hidden] { display: none; }
+
+/* ---------- Entraînement ---------- */
+.acts { display: grid; gap: 14px; max-width: 900px; }
+.acts .lead { margin-bottom: 4px; }
+.act { display: grid; grid-template-columns: 1.2fr 1fr auto; align-items: center; gap: 14px 24px; }
+.act h3 { margin-bottom: 2px; }
+.act .act-txt p { margin: 0; }
+.act-gauge strong { display: block; margin-bottom: 8px; font-family: var(--display); }
+.act .btn { min-width: 150px; }
+@media (max-width: 760px) { .act { grid-template-columns: 1fr; } .act .btn { width: 100%; } }
+.run-gauge { margin-bottom: 6px; }
+.quiz .actions { margin-top: 0; }
+
+/* ---------- Jeux : une affiche par jeu ---------- */
+.games { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+.poster { position: relative; display: flex; align-items: flex-end; min-height: 340px; overflow: hidden; text-decoration: none; color: #fff; border: 3px solid var(--ink); border-radius: var(--r-lg); box-shadow: var(--shadow); background: #12403A; transition: transform .18s ease; }
+.poster.c-coral { background: #8A3B2E; }
+.poster.c-sun { background: #7A5413; }
+.poster-img { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; }
+.poster::after { content: ""; position: absolute; inset: 0; background: linear-gradient(to top, rgba(6, 14, 28, .96) 0%, rgba(6, 14, 28, .84) 42%, rgba(6, 14, 28, 0) 78%); }
+.poster-body { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 20px; width: 100%; }
+.poster-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.poster .pill { margin: 0; background: rgba(255, 255, 255, .92); color: #15231E; font-size: .82rem; }
+.poster .pill-new { background: var(--sun); }
+.poster .pill-ok { background: #BFEBD6; color: #14523B; }
+.poster-title { font-family: var(--display); font-weight: 800; font-size: clamp(2rem, 7vw, 2.7rem); line-height: 1; letter-spacing: -0.03em; }
+.poster-text { font-size: 1rem; line-height: 1.4; max-width: 34em; }
+.poster-btn { margin-top: 6px; background: #fff; border-color: #fff; color: #15231E; min-height: 46px; padding: 8px 26px; }
+.poster:hover { transform: translateY(-3px); }
+.poster:hover .poster-btn { background: var(--sun); border-color: var(--sun); }
+@media (min-width: 700px) { .games .poster:only-child { max-width: 560px; } }
 
 /* ---------- Cartes à retourner ---------- */
 .seg { display: inline-flex; gap: 6px; margin-bottom: 20px; }
@@ -279,7 +329,7 @@ tbody th { font-weight: 700; }
 }
 
 @media print {
-  .top, .foot, .steps, .marks, .next, .actions, .back { display: none; }
+  .top, .foot, .tabs, .ch-gauge, .next, .actions, .back { display: none; }
   body { background: #fff; font-size: 11pt; }
   .table-wrap, .card, .def, .vocab div { box-shadow: none; }
 }

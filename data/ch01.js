@@ -32,8 +32,7 @@ SGN.chapitres.push({
         "Dans une entreprise, les dirigeants sont principalement contrôlés par les propriétaires ou les actionnaires, qui peuvent les remplacer.",
         "Dans une organisation publique, le contrôle est exercé par les électeurs lorsqu’elle est dirigée par des élus, ou par une autorité publique comme l’État.",
         "Dans une association, les dirigeants rendent des comptes aux membres, notamment lors de l’assemblée générale. Les donateurs peuvent aussi exercer une influence en cessant de financer l’association."
-      ] },
-    { t: "img", src: "assets/img/carte-mentale-ch1.jpg", alt: "Carte mentale du chapitre 1 : les types d’organisations, leur fonctionnement, leur gouvernement et le contrôle des dirigeants", legende: "La carte mentale du chapitre" }
+      ] }
   ],
 
   cartes: [
@@ -138,6 +137,22 @@ SGN.chapitres.push({
     { s: "Nouvel embauché dans un magasin de 300 salariés, Adam veut connaître ses horaires et les consignes de sécurité.",
       q: "Dans quel document trouvera-t-il ces règles ?",
       c: ["Les statuts", "Le règlement intérieur", "La fiche d’identité de l’entreprise", "Le bilan comptable"], r: 1,
-      e: "Le règlement intérieur organise la vie quotidienne au travail : horaires, sécurité, discipline." }
+      e: "Le règlement intérieur organise la vie quotidienne au travail : horaires, sécurité, discipline." },
+    { s: "Une commune gère la piscine municipale grâce aux impôts locaux. L’entrée coûte 3 €, bien moins que ce qu’elle coûte réellement à la commune.",
+      q: "Quel est le but de cette organisation ?",
+      c: ["Satisfaire l’intérêt général", "Réaliser un profit", "Partager des bénéfices entre ses membres"], r: 0,
+      e: "Une commune est une organisation publique : son but est de satisfaire l’intérêt général, et ses ressources viennent des impôts." },
+    { s: "Une association de quartier organise une brocante et dégage 2 000 € de bénéfice.",
+      q: "Que peut-elle faire de cet argent ?",
+      c: ["Le réinvestir dans son projet", "Le partager entre ses bénévoles", "Verser des dividendes", "Le remettre au maire"], r: 0,
+      e: "Une association a un but non lucratif : elle rend service sans partager de bénéfices. Elle réinvestit donc cet argent dans son projet." },
+    { s: "Karim crée une entreprise de livraison à vélo avec deux associés. Tous les trois apportent l’argent de départ, puis ils recrutent une gérante pour diriger l’entreprise.",
+      q: "Qui sont les propriétaires de l’entreprise ?",
+      c: ["Karim et ses deux associés", "La gérante", "Les clients", "La mairie"], r: 0,
+      e: "La structure de propriété désigne l’identité des propriétaires : ici, les trois associés. La gérante dirige, elle a été choisie par les propriétaires." },
+    { s: "Mécontents de la gestion du maire sortant, les habitants d’une commune élisent une autre équipe aux élections municipales.",
+      q: "Quel contrôle s’exerce ici ?",
+      c: ["Celui des électeurs sur les élus", "Celui des actionnaires sur les dirigeants", "Celui des donateurs sur l’association", "Celui du règlement intérieur"], r: 0,
+      e: "Dans une organisation publique dirigée par des élus, le contrôle est exercé par les électeurs." }
   ]
 });

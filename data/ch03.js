@@ -168,7 +168,25 @@ SGN.chapitres.push({
       e: "Dans le compromis, chaque partie cède un peu." },
     { q: "Rechercher une solution gagnant-gagnant, c’est :",
       c: ["Le compromis", "La collaboration", "L’évitement", "La compétition"], r: 1,
-      e: "La collaboration est la recherche d’une solution gagnant-gagnant." }
+      e: "La collaboration est la recherche d’une solution gagnant-gagnant." },
+    { q: "L’information transmise lors d’un échange s’appelle :",
+      c: ["Le message", "Le canal", "Le feedback", "Le bruit"], r: 0,
+      e: "Le message est l’information transmise." },
+    { q: "La personne qui transmet le message est :",
+      c: ["L’émetteur", "Le récepteur", "Le canal", "Le leader"], r: 0,
+      e: "L’émetteur est la personne qui transmet le message. Le récepteur est celle qui le reçoit." },
+    { q: "Pour qu’un échange réussisse, le lieu et le moment doivent être :",
+      c: ["Adaptés : un lieu calme et un moment où chacun est disponible", "Choisis au hasard", "Imposés par le récepteur", "Toujours les mêmes"], r: 0,
+      e: "La réussite d’un échange dépend de son contexte : un lieu calme et un moment où chacun est disponible." },
+    { q: "La distance que nous gardons avec un interlocuteur lors d’un échange s’appelle :",
+      c: ["La proxémie", "Le feedback", "Le canal", "La hiérarchie"], r: 0,
+      e: "La proxémie est la distance que nous gardons avec un interlocuteur lors d’un échange." },
+    { q: "Le leader implique l’équipe dans les décisions. C’est le style :",
+      c: ["Directif", "Participatif", "Délégatif", "Informel"], r: 1,
+      e: "Dans le style participatif, le leader implique l’équipe dans les décisions." },
+    { q: "Ignorer le conflit, c’est :",
+      c: ["Le compromis", "La collaboration", "L’évitement", "La compétition"], r: 2,
+      e: "L’évitement consiste à ignorer le conflit. La compétition, elle, consiste à imposer sa solution." }
   ],
 
   situations: [
@@ -199,6 +217,18 @@ SGN.chapitres.push({
     { s: "Élodie n’est pas cheffe d’équipe. Pourtant, pour préparer l’inventaire, tout le monde suit ses idées et son énergie.",
       q: "Quelle notion illustre cette situation ?",
       c: ["La relation d’autorité", "Le leadership", "Le conflit relationnel", "L’incitation financière"], r: 1,
-      e: "Élodie guide et influence le groupe sans pouvoir hiérarchique : c’est du leadership, pas une relation d’autorité." }
+      e: "Élodie guide et influence le groupe sans pouvoir hiérarchique : c’est du leadership, pas une relation d’autorité." },
+    { s: "La responsable explique une consigne à un apprenti. Il hoche la tête et reformule : « Donc je commence par le rayon du fond ? »",
+      q: "Que fait l’apprenti ?",
+      c: ["Il donne un feedback", "Il crée un bruit", "Il change de canal", "Il manipule sa responsable"], r: 0,
+      e: "Le feedback est la réaction du récepteur qui montre que le message est compris ou non : ici, il reformule la consigne." },
+    { s: "Le directeur demande à une vendeuse de venir travailler samedi. Elle accepte, parce que c’est son responsable hiérarchique.",
+      q: "Quelle relation est en jeu ?",
+      c: ["Une relation d’autorité", "Du leadership", "Une relation informelle", "Une manipulation"], r: 0,
+      e: "La relation d’autorité s’appuie sur le statut occupé dans l’organisation : c’est le lien hiérarchique qui fait accepter la demande." },
+    { s: "Deux collègues ne se supportent plus : l’un trouve l’autre trop bavard, l’autre le trouve froid. Ils ne se parlent plus.",
+      q: "De quel type de conflit s’agit-il ?",
+      c: ["Un conflit sur les tâches", "Un conflit relationnel", "Un conflit de valeurs"], r: 1,
+      e: "Le conflit relationnel est une tension liée à la personnalité, aux comportements ou à la communication entre deux personnes." }
   ]
 });

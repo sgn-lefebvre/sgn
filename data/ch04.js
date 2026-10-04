@@ -5,6 +5,13 @@ SGN.chapitres.push({
   question: "Comment un individu devient-il acteur dans une organisation ?",
   intro: "Dans une organisation, on ne travaille jamais seul : chacun fait partie de groupes et doit trouver sa place dans une culture commune. Cette synthèse suit le chemin du chapitre : d’abord l’individu dans ses groupes (Partie 1), puis son intégration dans l’organisation (Partie 2).",
 
+  jeux: [
+    { id: "ch04-premier-jour", titre: "Premier jour", ajout: "2026-10-04",
+      accroche: "Demain, tu commences comme vendeur dans un magasin de sport. Réponds aux messages de ton équipe et valide ta période d’essai.",
+      lien: "activites/ch04-premier-jour/index.html",
+      affiche: "activites/ch04-premier-jour/affiche.svg" }
+  ],
+
   synthese: [
     { t: "h", txt: "Partie 1 — Les interactions au sein d’un groupe" },
     { t: "h3", txt: "A. Les groupes" },
@@ -194,6 +201,22 @@ SGN.chapitres.push({
     { s: "Une stagiaire publie une idée d’amélioration sur la plateforme interne de l’entreprise. La direction la lit et décide de l’appliquer.",
       q: "Quel intérêt du réseau social d’entreprise cette situation montre-t-elle ?",
       c: ["Chacun peut partager ses idées, quel que soit son statut", "Il remplace la hiérarchie", "Il permet de vendre aux clients", "Il supprime les groupes informels"], r: 0,
-      e: "Le réseau social d’entreprise améliore la communication interne et favorise la coopération : chacun peut partager ses idées, quel que soit son statut." }
+      e: "Le réseau social d’entreprise améliore la communication interne et favorise la coopération : chacun peut partager ses idées, quel que soit son statut." },
+    { s: "Avant les soldes, la direction d’un magasin crée une équipe de quatre vendeurs chargée de préparer les rayons.",
+      q: "De quel type de groupe s’agit-il ?",
+      c: ["Un groupe formel", "Un groupe informel"], r: 0,
+      e: "Le groupe est créé par l’organisation pour structurer le travail et atteindre un objectif : c’est un groupe formel." },
+    { s: "Chez un opticien, tous les salariés portent la même veste grise avec le logo du magasin.",
+      q: "De quel élément de la culture d’organisation s’agit-il ?",
+      c: ["Une valeur", "Une norme", "Un code", "Un rituel"], r: 2,
+      e: "Un code est un signe visible qui identifie les membres de l’organisation." },
+    { s: "« Les jeunes ne savent pas travailler sans leur téléphone », affirme un chef de rayon à propos d’une stagiaire qu’il n’a encore jamais vue travailler.",
+      q: "Comment qualifier cette affirmation ?",
+      c: ["Un stéréotype", "Une norme", "Une cause externe", "Un rituel"], r: 0,
+      e: "C’est une image toute faite, simpliste et figée sur un groupe de personnes, souvent fausse : un stéréotype. Il peut conduire à des malentendus et à des discriminations." },
+    { s: "Depuis qu’elle est responsable de rayon, on attend de Sarah qu’elle organise les plannings et qu’elle tranche les désaccords de l’équipe.",
+      q: "Quelle notion illustre cette situation ?",
+      c: ["Le statut social", "L’identité sociale", "Le groupe de référence", "La culture d’organisation"], r: 0,
+      e: "Le statut social est la position qu’un individu occupe dans un groupe, reconnue par les autres, et qui entraîne des attentes particulières." }
   ]
 });

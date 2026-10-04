@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Premier jour</title>
+<style>
+:root{--bleu:#0b84fe;--vert:#2e9e5b;--rouge:#d64545;--jaune:#ffcf00}
+*{margin:0;padding:0;box-sizing:border-box;font-family:-apple-system,'Segoe UI',Roboto,Arial,sans-serif;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:#000;display:flex;justify-content:center}
+#phone{width:100%;max-width:480px;height:100dvh;background:#000;position:relative;overflow:hidden;display:flex;flex-direction:column}
+/* status bar */
+#status{height:34px;display:flex;justify-content:space-between;align-items:center;padding:0 16px;color:#fff;font-size:13px;font-weight:600;z-index:50;background:transparent;position:relative}
+#status .rep{color:#ff6b81}
+/* ===== écrans ===== */
+.scr{position:absolute;inset:34px 0 0 0;display:none;flex-direction:column}
+.scr.on{display:flex;animation:fad .4s}
+@keyframes fad{from{opacity:0}to{opacity:1}}
+/* lock */
+#lock{background:linear-gradient(170deg,#12355b,#0b1f3a 55%,#1b0f33);align-items:center;justify-content:flex-start;text-align:center;padding-top:9vh}
+#lock .heure{font-size:66px;font-weight:200;color:#fff}
+#lock .date{color:#cdd9ea;font-size:16px;margin-bottom:6vh}
+.notifcard{background:rgba(255,255,255,.92);border-radius:16px;margin:0 18px;padding:12px 14px;text-align:left;color:#111;width:calc(100% - 36px);box-shadow:0 8px 30px rgba(0,0,0,.4);animation:drop .7s}
+@keyframes drop{from{transform:translateY(-40px);opacity:0}to{transform:none;opacity:1}}
+.notifcard .app{font-size:12px;color:#555;display:flex;gap:6px;align-items:center;margin-bottom:3px}
+.notifcard b{font-size:14.5px}
+.notifcard p{font-size:14px;color:#333}
+#lock .btn-dev{margin-top:auto;margin-bottom:7vh}
+.pill{background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:16px;padding:14px 34px;border-radius:40px;cursor:pointer;backdrop-filter:blur(6px)}
+/* setup */
+#setup{background:#0b1f3a;align-items:center;justify-content:center;text-align:center;padding:24px}
+#setup h2{color:#fff;font-size:24px;margin-bottom:8px}
+#setup p{color:#9ab4d0;font-size:15px;margin-bottom:20px;line-height:1.5}
+#setup input{width:100%;max-width:320px;font-size:17px;padding:13px;border-radius:12px;border:none;text-align:center;margin-bottom:6px}
+#setup .msg{color:#ff8c8c;min-height:20px;font-size:14px}
+.btn{background:var(--jaune);border:none;color:#111;font-size:17px;font-weight:700;padding:13px 34px;border-radius:40px;cursor:pointer;margin-top:10px}
+/* transition jour */
+#jour{background:#000;align-items:center;justify-content:center;text-align:center}
+#jour .t1{color:#fff;font-size:34px;font-weight:800}
+#jour .t2{color:#8da4bd;font-size:17px;margin-top:8px}
+/* chat */
+#chat{background:#e9edf2}
+#chathead{background:#f6f7f9;border-bottom:1px solid #d8dde3;padding:10px 14px;display:flex;align-items:center;gap:10px}
+.avat{width:38px;height:38px;border-radius:50%;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:16px;flex:none}
+#chathead b{font-size:16px;color:#111;display:block;line-height:1.1}
+#chathead span{font-size:12.5px;color:#4caf6d}
+#fil{flex:1;overflow-y:auto;padding:12px 10px 8px;display:flex;flex-direction:column;gap:7px}
+.b{max-width:80%;padding:9px 12px;border-radius:16px;font-size:15px;line-height:1.35;animation:bub .25s;position:relative;word-wrap:break-word}
+@keyframes bub{from{transform:scale(.85);opacity:0}to{transform:none;opacity:1}}
+.eux{background:#fff;color:#111;align-self:flex-start;border-bottom-left-radius:5px;box-shadow:0 1px 1px rgba(0,0,0,.08)}
+.eux .qui{font-size:12px;font-weight:700;margin-bottom:2px}
+.moi{background:var(--bleu);color:#fff;align-self:flex-end;border-bottom-right-radius:5px}
+.sys{align-self:center;background:#d6dde6;color:#4a5b6e;font-size:12.5px;padding:4px 14px;border-radius:20px;text-align:center;max-width:90%}
+.typing{align-self:flex-start;background:#fff;border-radius:16px;border-bottom-left-radius:5px;padding:12px 16px;display:flex;gap:4px}
+.typing i{width:7px;height:7px;background:#9fb0c0;border-radius:50%;animation:tp 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes tp{0%,60%,100%{transform:none;opacity:.5}30%{transform:translateY(-4px);opacity:1}}
+/* pièces jointes */
+.piece{border-radius:12px;overflow:hidden;margin-top:6px;border:1px solid #0001}
+.polo{background:linear-gradient(135deg,#0082C3,#005a87);color:#fff;padding:18px;text-align:center;font-size:14px}
+.polo .tee{font-size:44px}
+.rapport{background:#f4f6f8;color:#222;padding:12px;font-size:13px;line-height:1.5;border-left:4px solid var(--rouge)}
+.insta{background:#fff;color:#111;font-size:13px}
+.insta .ihead{display:flex;gap:8px;align-items:center;padding:8px}
+.insta .iimg{background:linear-gradient(120deg,#5a2d82 50%,#d46a9f 50%);color:#fff;display:flex;font-weight:800;text-align:center;font-size:13px}
+.insta .iimg div{flex:1;padding:22px 8px}
+.insta .ifoot{padding:8px;color:#333}
+/* chips réponses */
+#chips{padding:10px;background:#f6f7f9;border-top:1px solid #d8dde3;display:flex;flex-direction:column;gap:8px}
+.chip{background:#fff;border:1.5px solid var(--bleu);color:var(--bleu);font-size:14.5px;padding:11px 14px;border-radius:22px;cursor:pointer;text-align:left;line-height:1.3;font-weight:600}
+.chip:active{background:#eaf3ff}
+.chip.ko{border-color:var(--rouge);color:var(--rouge);background:#ffefef;animation:sh .35s}
+@keyframes sh{25%{transform:translateX(-5px)}75%{transform:translateX(5px)}}
+/* note débloquée */
+#noteov{position:absolute;inset:0;background:rgba(5,15,25,.86);display:none;align-items:center;justify-content:center;z-index:60;padding:22px;backdrop-filter:blur(3px)}
+#noteov.on{display:flex}
+.notecard{background:linear-gradient(150deg,#fff8dc,#ffeaa0);color:#3a2d00;border-radius:18px;padding:22px 18px;max-width:380px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.6);animation:pop .5s;text-align:left}
+@keyframes pop{from{transform:scale(.6) rotate(-4deg);opacity:0}to{transform:none;opacity:1}}
+.notecard .pin{font-size:13px;font-weight:700;color:#8a6d00;letter-spacing:1px;margin-bottom:8px}
+.notecard h3{font-size:19px;margin-bottom:8px}
+.notecard p{font-size:14.5px;line-height:1.5}
+.notecard button{margin-top:14px;width:100%;background:#3a2d00;color:#ffeaa0;border:none;padding:12px;border-radius:12px;font-size:15px;font-weight:700;cursor:pointer}
+/* appel */
+#call{background:linear-gradient(180deg,#1a2c42,#0c1624);align-items:center;justify-content:space-between;text-align:center;padding:10vh 0 8vh}
+#call .qui{color:#fff;font-size:30px;font-weight:300}
+#call .sous{color:#8da4bd;font-size:15px;margin-top:6px;animation:cl 1.4s infinite}
+@keyframes cl{50%{opacity:.4}}
+#call .av{width:96px;height:96px;border-radius:50%;font-size:40px;margin:0 auto 18px}
+#call .boutons{display:flex;gap:70px}
+.rond{width:68px;height:68px;border-radius:50%;border:none;font-size:28px;cursor:pointer;color:#fff}
+.vert{background:var(--vert);animation:pulse 1.2s infinite}
+.rougeb{background:var(--rouge)}
+@keyframes pulse{50%{transform:scale(1.12);box-shadow:0 0 0 14px rgba(46,158,91,.15)}}
+/* fin */
+#fin{background:linear-gradient(170deg,#0b1f3a,#122c1c);overflow-y:auto;text-align:center;padding:24px 18px}
+#fin h1{color:#fff;font-size:26px;margin:10px 0}
+#fin .stat{color:#cde7d6;font-size:15.5px;line-height:1.7}
+.grille{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:16px 0}
+.mini{background:#fff8dc;color:#3a2d00;border-radius:12px;padding:10px 8px;font-size:12px;font-weight:700;text-align:center}
+#envoi{color:#7fe0a0;font-weight:700;font-size:15px;margin-top:10px}
+#confet{position:absolute;inset:0;pointer-events:none;z-index:70}
+.retour-site{display:inline-block;margin-top:16px;color:#fff;font-size:13px;font-weight:700;text-decoration:underline;opacity:.9}
+</style>
+</head>
+<body>
+<div id="phone">
+  <div id="status"><span id="heure">21:12</span><span>Premier jour&nbsp;&nbsp;<span class="rep" id="repaff"></span></span><span>📶 🔋82%</span></div>
+  <canvas id="confet"></canvas>
+
+  <div class="scr on" id="lock">
+    <div class="heure" id="lheure">21:12</div>
+    <div class="date">dimanche 12 octobre</div>
+    <div class="notifcard"><div class="app">💬 MESSAGES · maintenant</div><b>Sofiane (Decathlon)</b><p>Salut ! C'est Sofiane, ton responsable. Prêt pour demain ? 😄</p></div>
+    <div class="btn-dev"><button class="pill" onclick="aff('setup')">Glisser pour déverrouiller ↑</button><br><a class="retour-site" href="../../index.html#/chapitre/4/jeux">← Retour à Objectif SGN</a></div>
+  </div>
+
+  <div class="scr" id="setup">
+    <h2>📱 Configure ton téléphone</h2>
+    <p>Demain, c'est ton premier jour comme vendeur(se)<br>au magasin de sport de Montpellier-Odysseum.</p>
+    <input id="prenom" placeholder="Ton prénom">
+    <div class="msg" id="msg0"></div>
+    <button class="btn" onclick="start()">C'est parti</button>
+  </div>
+
+  <div class="scr" id="jour"><div class="t1" id="jt1"></div><div class="t2" id="jt2"></div></div>
+
+  <div class="scr" id="chat">
+    <div id="chathead"><div class="avat" id="cava">S</div><div><b id="cnom">Sofiane</b><span id="cstatut">en ligne</span></div></div>
+    <div id="fil"></div>
+    <div id="chips"></div>
+  </div>
+
+  <div class="scr" id="call">
+    <div><div class="av avat" style="background:#8c5bb0">J</div><div class="qui">Julie</div><div class="sous">Direction · appel entrant…</div></div>
+    <div class="boutons"><button class="rond rougeb" onclick="rejet()">✕</button><button class="rond vert" id="decro">✆</button></div>
+  </div>
+
+  <div class="scr" id="fin">
+    <div style="font-size:56px">🎉</div>
+    <h1>Période d'essai validée !</h1>
+    <div class="stat" id="stats"></div>
+    <div class="grille" id="notesfin"></div>
+    <div class="stat">📌 Ces notes épinglées = ta première fiche de révision.<br>On en reparle en classe !</div>
+    <div id="envoi"></div>
+    <a class="retour-site" href="../../index.html#/chapitre/4/jeux">← Retour à Objectif SGN</a>
+  </div>
+
+  <div id="noteov"><div class="notecard"><div class="pin">📌 NOTE ÉPINGLÉE</div><h3 id="ntit"></h3><p id="ntxt"></p><button onclick="fermeNote()">Garder cette note</button></div></div>
+</div>
+
+<script>
+/* =================== état =================== */
+let P='', rep=50, err={1:0,2:0,3:0,4:0,5:0,6:0}, t0=0, flags={}, notes=[];
+let noteResolve=null;
+const $=id=>document.getElementById(id);
+const dodo=ms=>new Promise(r=>setTimeout(r,ms));
+function aff(id){document.querySelectorAll('.scr').forEach(e=>e.classList.remove('on'));$(id).classList.add('on');}
+function repMaj(d){rep=Math.max(0,Math.min(100,rep+d));$('repaff').textContent='❤️'+rep;}
+/* =================== chat =================== */
+const AVC={'Sofiane':'#0082C3','Théo':'#d9a400','Lisa':'#c85a76','Manon':'#2e9e5b','Julie':'#8c5bb0','Lucas':'#1d8a8a','Sonia':'#b06a3b','Client':'#444','Mehdi':'#5b74c8'};
+function tete(nom,sous){$('cnom').textContent=nom;$('cstatut').textContent=sous||'en ligne';
+  $('cava').textContent=nom[0];$('cava').style.background=AVC[nom.split(' ')[0]]||'#666';}
+function scrollFil(){$('fil').scrollTop=$('fil').scrollHeight;}
+async function say(qui,html,tms=900){
+  const ty=document.createElement('div');ty.className='typing';ty.innerHTML='<i></i><i></i><i></i>';
+  $('fil').appendChild(ty);scrollFil();
+  await dodo(Math.min(2200,tms+html.length*8));
+  ty.remove();
+  const b=document.createElement('div');b.className='b eux';
+  b.innerHTML=(qui?'<div class="qui" style="color:'+(AVC[qui]||'#666')+'">'+qui+'</div>':'')+html;
+  $('fil').appendChild(b);scrollFil();
+  await dodo(350);
+}
+function me(html){const b=document.createElement('div');b.className='b moi';b.innerHTML=html;$('fil').appendChild(b);scrollFil();}
+async function sys(html){const b=document.createElement('div');b.className='sys';b.innerHTML=html;$('fil').appendChild(b);scrollFil();await dodo(700);}
+function videFil(){$('fil').innerHTML='';}
+/* notification cliquable (changement de conversation) */
+function notifClic(txt){return new Promise(res=>{
+  const b=document.createElement('button');b.className='chip';
+  b.style.cssText='align-self:center;max-width:88%;text-align:center;border-color:#d9a400;color:#6b5400;background:#fff8dc;animation:drop .5s';
+  b.innerHTML=txt;$('fil').appendChild(b);scrollFil();
+  b.onclick=()=>{b.remove();res();};
+});}
+/* mélange l'ordre d'affichage, en gardant l'index d'origine */
+function melange(opts){
+  const m=opts.map((o,i)=>({o:o,i:i}));
+  for(let k=m.length-1;k>0;k--){const j=Math.floor(Math.random()*(k+1));[m[k],m[j]]=[m[j],m[k]];}
+  return m;
+}
+/* choix : roleplay (libre) */
+function choix(opts){return new Promise(res=>{
+  $('chips').innerHTML='';
+  melange(opts).forEach(x=>{const c=document.createElement('button');c.className='chip';c.innerHTML=x.o.t;
+    c.onclick=()=>{$('chips').innerHTML='';me(x.o.t);res(x.i);};$('chips').appendChild(c);});
+  scrollFil();
+});}
+/* verrou : compte les erreurs, on reste jusqu'à la bonne réponse */
+function verrou(opts,seq){return new Promise(res=>{
+  $('chips').innerHTML='';
+  melange(opts).forEach(x=>{const c=document.createElement('button');c.className='chip';c.innerHTML=x.o.t;
+    c.onclick=()=>{
+      if(x.o.ok){$('chips').innerHTML='';me(x.o.t);res(x.i);}
+      else{err[seq]++;c.classList.add('ko');c.disabled=true;}
+    };$('chips').appendChild(c);});
+  scrollFil();
+});}
+/* bilan : UNE tentative */
+function uneFois(opts){return new Promise(res=>{
+  $('chips').innerHTML='';
+  melange(opts).forEach(x=>{const c=document.createElement('button');c.className='chip';c.innerHTML=x.o.t;
+    c.onclick=()=>{$('chips').innerHTML='';me(x.o.t);res(!!x.o.ok);};$('chips').appendChild(c);});
+  scrollFil();
+});}
+function note(tit,txt){notes.push(tit);
+  return new Promise(res=>{noteResolve=res;$('ntit').textContent=tit;$('ntxt').innerHTML=txt;$('noteov').classList.add('on');});}
+function fermeNote(){$('noteov').classList.remove('on');if(noteResolve)noteResolve();}
+async function jour(t1,t2,h){$('jt1').textContent=t1;$('jt2').textContent=t2;$('heure').textContent=h;aff('jour');await dodo(1900);aff('chat');}
+/* =================== scénario =================== */
+function start(){
+  P=$('prenom').value.trim();
+  if(!P){$('msg0').textContent='Écris ton prénom !';return;}
+  t0=Date.now();repMaj(0);histoire();
+}
+async function histoire(){
+/* ---------- SÉQUENCE 1 : dimanche soir ---------- */
+tete('Sofiane','Decathlon · rayon Cycle');videFil();aff('chat');
+await sys('dimanche · 21:12');
+await say('Sofiane','Salut '+P+' ! C’est Sofiane, ton responsable au rayon Cycle 👋');
+await say('Sofiane','Prêt pour demain ?');
+let c=await choix([
+ {t:'Carrément ! 💪',r:2},{t:'On va dire que oui 😅',r:0},{t:'J’ai le droit de dire non ?',r:0}]);
+if(c===0){repMaj(3);await say('Sofiane','J’aime bien ça 😎');}
+else if(c===2){await say('Sofiane','😂 Non. À demain 8h30 !');}
+else{await say('Sofiane','T’inquiète, tout le monde flippe le premier jour.');}
+await say('Sofiane','Bon, 2-3 trucs à savoir. Je t’ai ajouté sur <b>Decat’Connect</b>, notre réseau interne.');
+await say('Sofiane','Tu y verras le canal <b>#rayon-cycle</b> : briefing TOUS les matins à 8h45. Présence obligatoire — c’est le taf, pas une option 😄');
+await say('Sofiane','Petit test pour voir si tu suis 😏 À ton avis, ce canal #rayon-cycle, qui l’a créé ?');
+await verrou([
+ {t:'Le magasin : c’est un canal officiel pour organiser le travail',ok:1},
+ {t:'Les vendeurs, pour discuter entre eux'},
+ {t:'Personne : il s’est créé tout seul avec le temps'}],1);
+await say('Sofiane','Exact. C’est l’organisation qui décide : qui en fait partie, pour quoi faire, avec quelles règles.');
+await notifClic('🔔 <b>Théo t’a ajouté au groupe<br>« Les 5 du midi 🍕⚽ »</b><br><small>👆 Appuie pour ouvrir la conversation</small>');
+videFil();tete('Les 5 du midi 🍕⚽','Théo, Lisa, Mehdi + 2');
+await sys('Tu as rejoint « Les 5 du midi 🍕⚽ » · groupe privé · 6 membres');
+await say('Théo','BIENVENUE AU NOUVEAU 😎😎');
+await say('Théo','Futsal jeudi 19h, terrain de Lattes. T’es des nôtres ?');
+c=await choix([
+ {t:'Grave, chaud ⚽'},{t:'Je peux pas jeudi, mais merci 🙏'},{t:'C’est obligatoire ?'}]);
+if(c===0){flags.futsal=1;repMaj(4);await say('Théo','🔥🔥🔥');}
+if(c===1){flags.futsal=0;await say('Théo','Pas grave, la prochaine ! 😉');}
+if(c===2){flags.futsal=0;await say('Théo','😂😂 OBLIGATOIRE ?? Frérot. C’est du futsal. Pas une réunion.');await say('Lisa','Laisse-le, il confond encore 😄');}
+await say('Lisa','Au fait question existentielle pour le nouveau 😄 : si tu quittes CE groupe, il se passe quoi ?');
+await verrou([
+ {t:'Rien : c’est un groupe entre collègues, chacun est libre',ok:1},
+ {t:'Un avertissement : les groupes du travail sont surveillés'},
+ {t:'Une convocation : Julie voit tout ce qui se passe'}],1);
+await say('Mehdi','Voilà. Ici personne t’oblige à rien, on est là parce qu’on s’entend bien 🤝');
+await notifClic('💬 <b>Nouveau message — Sofiane</b><br><small>👆 Appuie pour ouvrir</small>');
+videFil();tete('Sofiane','Decathlon · rayon Cycle');
+await sys('22:04');
+await say('Sofiane','Dernière chose avant dodo 😏 Le futsal de Théo, tu peux le zapper sans problème. Mais si tu zappes le briefing de demain 8h45… il se passe quoi à ton avis ?');
+await verrou([
+ {t:'Ça va mal se passer : le briefing est obligatoire, c’est le travail',ok:1},
+ {t:'Rien : c’est comme le futsal, chacun est libre'},
+ {t:'Juste une remarque gentille : ici tout est détendu'}],1);
+await say('Sofiane','Voilà la différence. Les deux groupes comptent, mais pas pareil : l’un organise le boulot, l’autre soude l’équipe. Allez, à demain 💤');
+await note('Groupe formel / groupe informel','Le <b>groupe formel</b> est créé par l’organisation : un but précis, des règles, un responsable (le canal #rayon-cycle, le briefing obligatoire).<br><br>Le <b>groupe informel</b> naît tout seul, par affinité (les 5 du midi) : on y entre et on en sort librement.<br><br>Les deux sont complémentaires : le premier structure le travail, le second crée la cohésion.');
+/* ---------- SÉQUENCE 2 : lundi ---------- */
+await jour('Lundi','Jour J. 8:28 — le brief du nouveau','8:28');
+tete('Sofiane','Decathlon · rayon Cycle');videFil();
+await sys('lundi · 8:28 · réserve du magasin');
+await say('Sofiane','Bienvenue '+P+' ! Avant de te lâcher en rayon, LE BRIEF. Le mode d’emploi de la maison, version 2 minutes. Ça n’est écrit nulle part, alors grave-le là 👆');
+await say('Sofiane','<b>Règle 1</b> — tout le monde se tutoie. Même Julie, la directrice. SURTOUT Julie.');
+await say('Sofiane','<b>Règle 2</b> — polo bleu + badge. Le dernier qui est venu en costume… on a encadré la photo. Elle est dans la salle de pause. 😂');
+await say('Sofiane','<b>Règle 3</b> — 8h45, cercle, tous les matins. 3 minutes chrono. Tout le monde, tous les jours.');
+await say('Sofiane','<b>Règle 4</b> — quelqu’un réussit un truc (diplôme, promo, record de vente) ? Applaudissements + goûter. Oui, le goûter est sacré ici.');
+await say('Sofiane','Et le plus beau : RIEN de tout ça n’est dans ton contrat. Mais c’est plus important que le règlement. 😄');
+c=await choix([{t:'C’est noté chef 🫡'},{t:'Attends, le goûter est… sacré ?'},{t:'Et si je préfère le vouvoiement ?'}]);
+if(c===1)await say('Sofiane','SACRÉ. La dernière fois qu’on l’a oublié, Lisa en parle encore.');
+if(c===2)await say('Sofiane','Tu peux essayer. Tu tiendras 2 jours 😂');
+await say('Sofiane','Bon. Contrôle surprise 😏 On va voir si tu as écouté.');
+await say('Sofiane','Situation 1 : Julie arrive vers toi. Tu dis quoi ?');
+await verrou([
+ {t:'« Salut Julie ! » : ici tout le monde se tutoie',ok:1},
+ {t:'« Bonjour Madame » : on vouvoie toujours une directrice'},
+ {t:'Rien : j’évite de lui parler, trop risqué'}],2);
+await say('Sofiane','✔ Règle 1. Situation 2 : Manon décroche une promotion. Il se passe quoi dans l’heure ?');
+await verrou([
+ {t:'Applaudissements + goûter : ici chaque réussite se fête',ok:1},
+ {t:'Rien de spécial : la vie privée reste privée'},
+ {t:'Une note de service : tout passe par l’écrit'}],2);
+await say('Sofiane','✔ Règle 4. Dernière, la plus importante : ces règles ne sont écrites NULLE PART. Pourquoi tout le monde les respecte, à ton avis ?');
+await verrou([
+ {t:'Les anciens les transmettent aux nouveaux, comme Sofiane avec moi',ok:1},
+ {t:'Elles sont écrites dans le contrat de travail'},
+ {t:'La loi oblige toutes les entreprises à faire pareil'}],2);
+await say('Sofiane','Exactement ce que je suis en train de faire 😄 Allez : polo, badge, et dans 12 minutes… le cercle. Bienvenue chez nous.');
+await jour('Lundi soir','20:51 · ton pote Lucas','20:51');
+tete('Lucas','ton pote du lycée');videFil();
+await sys('lundi · 20:51');
+await say('Lucas','ALORS ce premier jour ???? raconte 👀');
+c=await choix([
+ {t:'Ils ont un « mode d’emploi » complet… qui n’est écrit nulle part 🤯'},
+ {t:'Ils font des goûters. Je crois que c’est une secte. Une secte sympa.'},
+ {t:'J’ai failli faire une révérence à la directrice, sinon ça va'}]);
+if(c===1)await say('Lucas','😂😂 une secte avec des goûters, tu signes où');
+else if(c===2)await say('Lucas','MDRRR la révérence 😭');
+else await say('Lucas','attends, des règles que personne n’écrit mais que tout le monde suit ?? comment tu les apprends alors ?');
+await say('Lucas','En vrai c’est stylé : chaque boîte a son propre mode de vie, et tu l’attrapes juste en vivant dedans 🤯');
+await note('La culture d’organisation','Le « mode d’emploi non écrit » du brief de Sofiane : ce en quoi on croit (<b>valeurs</b> — l’esprit d’équipe), les règles que tous respectent (<b>normes</b> — le tutoiement), les signes visibles (<b>codes</b> — le polo, le badge) et les habitudes collectives (<b>rituels</b> — le cercle de 8h45, le goûter des réussites).<br><br>Ensemble = la <b>culture de l’organisation</b>. Elle n’est écrite nulle part : le groupe la transmet aux nouveaux.');
+/* ---------- SÉQUENCE 3 : mercredi ---------- */
+await jour('Mercredi','13:04 · la pause avec Manon','13:04');
+tete('Manon','rayon Sports co');videFil();
+await sys('mercredi · 13:04 · salle de pause');
+await say('Manon','Pause ! 🥪 Bon, nouveau rituel pour toi : mon petit jeu préféré pour tester les recrues 😏');
+await say('Manon','Je t’envoie des phrases qu’on entend partout. Toi tu me dis juste : <b>« ça passe »</b> ou <b>« ça enferme des gens dans une case »</b>. Prêt(e) ?');
+c=await choix([{t:'Vas-y, balance 😄'},{t:'C’est noté sur 20 ?'}]);
+if(c===1)await say('Manon','Sur ta dignité. C’est pire. 😂');
+await say('Manon','1️⃣ « Noël, c’est la magie en famille. » 🎄');
+await verrou([{t:'Ça passe 👌',ok:1},{t:'Ça enferme 🚫'}],3);
+await say('Manon','Ouais : c’est une image toute faite, mais elle ne met personne dans une case. Les pubs ADORENT ce genre d’images, d’ailleurs.');
+await say('Manon','2️⃣ « Les gamers sont des asociaux enfermés dans le noir. » 🎮');
+await verrou([{t:'Ça enferme 🚫',ok:1},{t:'Ça passe 👌'}],3);
+await say('Manon','Et voilà : là on parle de PERSONNES. Des millions de gens dans une seule case. Mon frère est gamer ET capitaine de son club de hand 🤷‍♀️');
+await say('Manon','3️⃣ « Les Marseillais exagèrent toujours tout. » ⚪🔵');
+await verrou([{t:'Ça enferme 🚫',ok:1},{t:'Ça passe 👌'}],3);
+await say('Manon','Exact. Et dis pas ça devant Mehdi, il est de Marseille. (Il dirait que c’est EXAGÉRÉ. 😂)');
+await say('Manon','4️⃣ « Le petit-déjeuner, c’est le repas le plus important de la journée. » 🥐');
+await verrou([{t:'Ça passe 👌',ok:1},{t:'Ça enferme 🚫'}],3);
+await say('Manon','Oui — vraie ou fausse, cette idée ne vise personne. Dernière, la plus sournoise :');
+await say('Manon','5️⃣ « Les filles, les maths, ça fait deux. » ➗');
+await verrou([{t:'Ça enferme 🚫',ok:1},{t:'Ça passe 👌'}],3);
+await say('Manon','Et c’est pas juste faux : ce genre de cases finit par décourager des gens de faire ce qu’ils aiment. C’est ça le vrai problème.');
+await say('Manon','Tiens, du vécu : ce matin un client m’a sorti « vous êtes bien trop jeune pour vous y connaître en matériel, appelez-moi un ancien ». J’ai 10 ans de pratique. 😐');
+c=await choix([
+ {t:'« Il a demandé un ancien ? T’aurais dû appeler Jean-Marc pour qu’il dise qu’il te demande conseil 😂 »'},
+ {t:'« Et tu lui as répondu quoi ?? »'},
+ {t:'« Les clients, hein… 🙄 »'}]);
+if(c===0){repMaj(3);await say('Manon','😂😂 excellente idée pour la prochaine fois');}
+if(c===1)await say('Manon','Je lui ai conseillé LE meilleur produit du rayon. Vengeance par la compétence 😌');
+await say('Manon','Question sérieuse du coup : son idée « les jeunes n’y connaissent rien », elle visait qui exactement ?');
+await verrou([
+ {t:'Tous les jeunes d’un coup : c’est une case générale',ok:1},
+ {t:'Seulement Manon : c’était personnel'},
+ {t:'Personne : c’était juste une remarque en passant'}],3);
+await say('Manon','Voilà. Une case, des millions de personnes dedans, et faux la plupart du temps. Bienvenue dans mon quotidien 😄 Allez, fin de pause !');
+await note('Représentation / stéréotype','Une <b>représentation</b> est une image simplifiée que tout le monde partage (« Noël = la magie en famille »). Les publicités s’en servent : tant que ça parle d’idées ou de produits, ça n’enferme personne.<br><br>Quand l’image toute faite vise un <b>groupe de PERSONNES</b> (les gamers, les jeunes, les filles en maths…), c’est un <b>stéréotype</b> : il enferme dans une case, il est souvent faux, et il peut mener à des discriminations.');
+/* ---------- SÉQUENCE 4 : jeudi ---------- */
+await jour('Jeudi','20:14 · ça chauffe 🚨','20:14');
+tete('Équipe Odysseum 🏪','32 membres');videFil();
+await sys('jeudi · 20:14');
+await say('Julie','⚠️ Problème : la commande des 200 raquettes de badminton pour le tournoi de samedi… n’est jamais arrivée.');
+await say('Sonia','C’est Mehdi qui l’a passée, non ? 🙄 Tête en l’air comme il est, ça devait finir par arriver…');
+await say('Mehdi','PARDON ??? 😡');
+await say('Théo','oh là 🍿🍿');
+await say('Julie','STOP. Personne n’accuse personne avant d’avoir lu ça :');
+await say('Julie','<div class="piece rapport"><b>📎 RAPPORT — Suivi commande n°4471</b><br>• Mardi 14:32 — commande validée correctement par M. Benali (Mehdi) ✔<br>• Mardi 14:41 — <b>PANNE DU SERVEUR du fournisseur</b> : commande jamais reçue de leur côté<br>• Aucun message d’erreur affiché en magasin</div>',900);
+await say('Julie',P+', tu es neuf ici, tu as l’œil neutre. Trois questions, réponds franchement.');
+await say('Julie','1️⃣ Sonia explique le problème par quoi ?');
+await verrou([
+ {t:'Par la personne : le caractère de Mehdi',ok:1},
+ {t:'Par la situation : un problème extérieur'}],4);
+await say('Julie','2️⃣ Et le rapport, il montre quoi ?');
+await verrou([
+ {t:'Que la cause est extérieure : la panne du fournisseur',ok:1},
+ {t:'Que Mehdi a mal fait son travail'}],4);
+await say('Julie','3️⃣ Donc l’accusation de Sonia, on la qualifie comment ?');
+await verrou([
+ {t:'Injuste : elle a accusé la personne alors que c’était la situation',ok:1},
+ {t:'Méritée : quand on gère une commande, on assume'},
+ {t:'Prudente : mieux vaut accuser d’abord, vérifier ensuite'}],4);
+await say('Julie','Exactement. Et ce réflexe — accuser la personne avant de regarder la situation — on l’a tous. À surveiller.');
+await say('Julie','Bon. Qui annonce la conclusion au groupe ? 😄 '+P+', honneur au nouveau.');
+c=await choix([
+ {t:'« Verdict : Mehdi innocent, le serveur du fournisseur coupable. Affaire classée 🧑‍⚖️ »'},
+ {t:'« Mehdi 1 — 0 Serveur du fournisseur »'},
+ {t:'« On doit des excuses à Mehdi (et peut-être un goûter) 🧁 »'}]);
+if(c===2){await say('Théo','LE GOÛTER DE L’INNOCENCE 😂🧁');}
+if(c===1){await say('Mehdi','je mets ce score dans ma bio 😤');}
+await say('Sonia','Bon… ok. Pardon Mehdi 😬 j’ai accusé trop vite.');
+await say('Mehdi','❤️ merci '+P);
+await say('Théo','le nouveau qui résout les crises 😎 adopté.');
+await note('L’attribution','Quand quelque chose rate, on cherche un responsable : soit <b>la personne</b> (son caractère, ses efforts — cause interne : « il est tête en l’air »), soit <b>la situation</b> (le contexte, le matériel — cause externe : la panne du fournisseur).<br><br>⚠️ Le réflexe piège : accuser la personne alors que la situation explique tout. C’est injuste — et ça détruit la confiance dans une équipe.');
+/* ---------- SÉQUENCE 5 : vendredi ---------- */
+await jour('Vendredi','17:45 · un appel entrant…','17:45');
+aff('call');
+await new Promise(res=>{$('decro').onclick=res;});
+tete('Julie','📞 appel en cours · Direction');videFil();aff('chat');
+await sys('vendredi · 17:46 · 📞 appel');
+await say('Julie','Bonsoir '+P+' ! Alors, cette première semaine ?');
+await choix([{t:'Intense. Mais j’ai tout donné 💪'},{t:'J’ai survécu, c’est déjà ça 😅'}]);
+await say('Julie','😄 Avant de valider ta période d’essai, j’ai une vraie mission pour toi : on recrute un vendeur au rayon Natation, et je veux ton avis.');
+await say('Julie','Je t’envoie d’abord le document de référence :');
+await say('Julie','<div class="piece rapport" style="border-left-color:#0082C3"><b>📄 FICHE DE POSTE — Vendeur(se) rayon Natation</b><br>• Missions : conseiller les clients, gérer le stock, animer des démonstrations<br>• Rattachement : responsable du rayon Natation<br>• Compétences attendues : connaître les produits, maîtriser la caisse, esprit d’équipe</div>',900);
+await say('Julie','Première question : à quoi sert ce document, à ton avis ?');
+await verrou([
+ {t:'Il décrit les missions et les attentes du poste',ok:1},
+ {t:'C’est le contrat de travail'},
+ {t:'Un document administratif qu’on ne ressort jamais'}],5);
+await say('Julie','Exactement. Maintenant, la candidate : Inès, 22 ans. Je te lis son dossier, et tu me classes chaque élément. Il y a trois tiroirs : ce qu’elle <b>SAIT</b>, ce qu’elle <b>SAIT FAIRE</b>, et ce qu’elle <b>SAIT ÊTRE</b>.');
+await say('Julie','« Licence STAPS : elle connaît parfaitement les produits de natation. »');
+await verrou([{t:'Elle SAIT',ok:1},{t:'Elle SAIT FAIRE'},{t:'Elle SAIT ÊTRE'}],5);
+await say('Julie','« Elle a déjà tenu une caisse et animé des cours d’aquagym devant un groupe. »');
+await verrou([{t:'Elle SAIT FAIRE',ok:1},{t:'Elle SAIT'},{t:'Elle SAIT ÊTRE'}],5);
+await say('Julie','« Souriante, ponctuelle, garde son calme avec les clients pénibles. »');
+await verrou([{t:'Elle SAIT ÊTRE',ok:1},{t:'Elle SAIT'},{t:'Elle SAIT FAIRE'}],5);
+await say('Julie','Dernière subtilité 😏 Un candidat concurrent a d’excellentes connaissances, de la pratique… mais il est désagréable et toujours en retard. On l’embauche ?');
+await verrou([
+ {t:'Non : le savoir-être compte autant que le reste',ok:1},
+ {t:'Oui : les connaissances passent avant tout'},
+ {t:'Oui : on le placera loin des clients'}],5);
+await say('Julie','On est d’accord : savoir et savoir-faire ne suffisent pas, le savoir-être compte autant — surtout face aux clients. Inès aura le poste 😉 Ton premier recrutement !');
+await note('Fiche de poste & compétences','La <b>fiche de poste</b> décrit les missions, les responsabilités et les compétences attendues pour un poste : c’est la référence pour recruter et évaluer.<br><br>Les <b>compétences</b> d’une personne se rangent en trois familles : les <b>savoirs</b> (ce qu’elle sait — ses connaissances), les <b>savoir-faire</b> (ce qu’elle sait faire — la pratique) et le <b>savoir-être</b> (comment elle se comporte). Un bon profil tient sur les trois.');
+/* ---------- BILAN ---------- */
+await say('Julie','Dernière formalité : le QCM officiel d’intégration 📋 5 questions. Je note toutes tes erreurs, alors réfléchis bien 😏');
+await say('Julie','1/5 — Un groupe créé par l’organisation, avec des règles et un responsable, c’est un groupe…');
+await verrou([{t:'Formel',ok:1},{t:'Informel'},{t:'D’amis'}],6);
+await say('Julie','2/5 — Le polo, le tutoiement, le cercle du matin, l’esprit d’équipe : tout ça forme…');
+await verrou([{t:'La culture de l’organisation',ok:1},{t:'Le règlement intérieur'},{t:'Une coïncidence'}],6);
+await say('Julie','3/5 — « Les jeunes n’y connaissent rien en bricolage », c’est…');
+await verrou([{t:'Un stéréotype',ok:1},{t:'Une représentation'},{t:'Une norme'}],6);
+await say('Julie','4/5 — Expliquer la commande perdue par la panne du serveur du fournisseur, c’est invoquer une cause…');
+await verrou([{t:'Externe (la situation)',ok:1},{t:'Interne (la personne)'},{t:'Une cause mystérieuse'}],6);
+await say('Julie','5/5 — « Savoir réparer une crevaison de vélo », c’est…');
+await verrou([{t:'Un savoir-faire',ok:1},{t:'Un savoir'},{t:'Un savoir-être'}],6);
+await say('Julie','…');
+await say('Julie','🎉 <b>Période d’essai VALIDÉE.</b> Bienvenue dans l’équipe, '+P+'. Officiellement.');
+tete('Équipe Odysseum 🏪','32 membres');
+await say('Théo','🎉🎉🎉 LE NOUVEAU EST CONFIRMÉ');
+await say('Manon','bravo '+P+' !! 💚');
+if(flags.futsal)await say('Théo','Et jeudi prochain : FUTSAL. Pas d’excuse cette fois ⚽');
+await say('Théo','Attends attends attends. AVANT de valider officiellement… DERNIÈRE question. La plus importante de la semaine :');
+await say('Théo','On mange toujours au Chamas Tacos. T’en es ? 🌯');
+c=await choix([{t:'Bien sûr, j’adore 😍'},{t:'Jamais. C’est vraiment pas bon.'},{t:'Seulement si quelqu’un d’autre paye 😏'}]);
+if(c===0){await say('Théo','RÉPONSE PARFAITE. Validé à 200 % 🌯🔥');await say('Lisa','on commande samedi alors 😍');}
+else{await say('Théo','😬😬😬');await say('Théo','Monsieur Lefebvre risque de ne pas t’accepter dans le groupe…');await say('Lisa','réfléchis bien à ta vie 😂');}
+await say('Sofiane','Fier de toi 💪 Repos ce week-end — lundi, on attaque pour de vrai.');
+await dodo(800);
+finDuJeu();
+}
+/* =================== fin =================== */
+function rejet(){alert('😅 C’est la directrice… il vaut mieux décrocher !');}
+function finDuJeu(){
+  const s=Math.floor((Date.now()-t0)/1000);
+  const temps=Math.floor(s/60)+' min '+(s%60)+' s';
+  const totErr=err[1]+err[2]+err[3]+err[4]+err[5];
+  $('stats').innerHTML='<b>'+P+'</b> · ❤️ réputation : '+rep+'/100<br>⏱ '+temps+' · ❌ '+totErr+' erreur(s) · 📋 Bilan : <b>'+err[6]+' erreur(s)</b>';
+  $('notesfin').innerHTML=notes.map(n=>'<div class="mini">📌 '+n+'</div>').join('');
+  aff('fin');confettis();
+  try{localStorage.setItem('sgn-jeu-ch04-premier-jour','termine');}catch(e){}
+  const d=new URLSearchParams();
+  d.append('entry.1371614056',P);
+  d.append('entry.1267519749',temps);
+  d.append('entry.2118142894',totErr+' erreur(s) · Réputation '+rep+'/100');
+  d.append('entry.1658200876',err[1]+' erreur(s)');
+  d.append('entry.545268161',err[2]+' erreur(s)');
+  d.append('entry.1821877842',err[3]+' erreur(s)');
+  d.append('entry.972290824',err[4]+' erreur(s)');
+  d.append('entry.126725829',err[5]+' erreur(s)');
+  d.append('entry.184483502',err[6]+' erreur(s)');
+  fetch('https://docs.google.com/forms/d/e/1FAIpQLSffjtA3cseILytwp6N1LsOWGOp4sNJl83RVGLoDUlBXtOpc5Q/formResponse',{method:'POST',mode:'no-cors',body:d})
+   .finally(()=>{$('envoi').textContent='✔ Résultats envoyés au professeur';});
+}
+function confettis(){
+  const cv=$('confet'),c=cv.getContext('2d');
+  cv.width=cv.offsetWidth;cv.height=cv.offsetHeight;
+  const COL=['#ffcf00','#0b84fe','#2e9e5b','#c85a76','#8c5bb0','#fff'];
+  const PP=Array.from({length:120},()=>({x:Math.random()*cv.width,y:-20-Math.random()*cv.height,w:6+Math.random()*6,h:8+Math.random()*8,v:2+Math.random()*3.5,r:Math.random()*6.28,vr:(Math.random()-.5)*.25,col:COL[Math.floor(Math.random()*COL.length)]}));
+  const fin=Date.now()+6000;
+  (function b(){c.clearRect(0,0,cv.width,cv.height);
+    PP.forEach(p=>{p.y+=p.v;p.r+=p.vr;if(p.y>cv.height+20){p.y=-20;p.x=Math.random()*cv.width;}
+      c.save();c.translate(p.x,p.y);c.rotate(p.r);c.fillStyle=p.col;c.fillRect(-p.w/2,-p.h/2,p.w,p.h);c.restore();});
+    if(Date.now()<fin)requestAnimationFrame(b);else c.clearRect(0,0,cv.width,cv.height);})();
+}
+/* horloge du lock screen */
+(function(){const d=new Date();$('lheure').textContent='21:12';})();
+</script>
+</body>
+</html>

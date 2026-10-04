@@ -126,6 +126,22 @@ SGN.chapitres.push({
     { s: "Avant un entretien, une recruteuse trouve en ligne des photos de soirée d’une candidate, visibles par tout le monde.",
       q: "Que pouvait faire la candidate pour l’éviter ?",
       c: ["Paramétrer ses comptes pour limiter qui voit ses publications", "Changer de personnalité", "Supprimer son historique de navigation", "Écrire à la mairie"], r: 0,
-      e: "Paramétrer ses comptes fait partie des bonnes pratiques pour contrôler son e-réputation, avec se googliser et réfléchir avant de publier." }
+      e: "Paramétrer ses comptes fait partie des bonnes pratiques pour contrôler son e-réputation, avec se googliser et réfléchir avant de publier." },
+    { s: "Ce matin, Inès a appris une mauvaise nouvelle. En réunion, elle est triste et n’arrive pas à se concentrer. Demain, cela ira mieux.",
+      q: "De quoi s’agit-il ?",
+      c: ["D’une émotion", "D’un trait de personnalité", "De son identité numérique", "De son e-réputation"], r: 0,
+      e: "La tristesse est une réaction rapide, souvent involontaire et de courte durée face à un événement : c’est une émotion." },
+    { s: "Pour son premier jour, un nouveau vendeur est stressé. Devant les clients, il sourit, salue et répond poliment.",
+      q: "Quel élément décrit son attitude ?",
+      c: ["Il est stressé", "Il sourit", "Il salue les clients", "Il répond poliment"], r: 0,
+      e: "L’attitude est intérieure, on la devine : « stressé » est un adjectif. Sourire, saluer et répondre sont des actions, donc des comportements." },
+    { s: "Hugo publie une photo de vacances, commente la vidéo d’un ami et change sa photo de profil.",
+      q: "De quel type de traces s’agit-il ?",
+      c: ["Des traces publiées volontairement", "Des traces collectées à son insu", "Des traces qui ne font pas partie de son identité numérique"], r: 0,
+      e: "Photos et publications sont des traces que l’on publie volontairement. L’historique et les recherches, eux, sont collectés à notre insu." },
+    { s: "Un restaurant découvre plusieurs avis négatifs à son sujet sur Internet. Depuis, il reçoit moins de réservations.",
+      q: "Qu’est-ce qui est en jeu pour ce restaurant ?",
+      c: ["Son e-réputation", "Sa personnalité", "Son contrôle de soi", "Sa perception"], r: 0,
+      e: "L’e-réputation est l’image et l’opinion que les internautes ont d’une personne, d’une entreprise ou d’une organisation sur Internet." }
   ]
 });

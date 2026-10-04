@@ -3,12 +3,14 @@
    son fichier data/chXX.js est chargé dans index.html. */
 window.SGN = {
   config: {
-    titre: "SGN",
+    titre: "Objectif SGN",
     prof: "M. Lefebvre",
     classe: "1re STMG",
     matiere: "Sciences de gestion et numérique",
     chapitreEnCours: 4,
-    revision: false, /* true pour afficher l’onglet « Révision » (tous les chapitres mélangés) */
+    /* Prochaine évaluation, affichée sur l'accueil. Date au format AAAA-MM-JJ.
+       Le bandeau disparaît tout seul le lendemain. Pour le retirer avant : date: "" */
+    evaluation: { date: "2026-10-09", chapitre: 3 },
     themes: {
       1: "De l’individu à l’acteur"
     }
