@@ -9,6 +9,8 @@
   var CFG = SGN.config;
   var CH = SGN.chapitres.slice().sort(function (a, b) { return a.id - b.id; });
   var app = document.getElementById("app");
+  /* Le logo de la barre du haut (index.html), repris en grand sur l'accueil. */
+  var LOGO = (document.querySelector(".logo-mark") || {}).outerHTML || "";
 
   /* ---------- Outils ---------- */
   function el(tag, props) {
@@ -47,6 +49,11 @@
   function pluriel(n, mot, mots) { return n + " " + (n > 1 ? (mots || mot + "s") : mot); }
   function chapitre(id) { return CH.filter(function (c) { return c.id === id; })[0]; }
   function nomTheme(t) { return (CFG.themes && CFG.themes[t]) || ""; }
+  /* Thème d'entraînement d'un chapitre : un nom, ou { nom, notions }. */
+  function nomDuTheme(x) { return typeof x === "string" ? x : x.nom; }
+  /* Chapitre verrouillé (« verrouille: true ») : pas encore fini en classe. Seuls les jeux et les documents sont ouverts. */
+  function ouvert(c) { return !c.verrouille; }
+  var CH_OUVERTS = CH.filter(ouvert);
 
   /* ---------- Progression (enregistrée sur l'appareil) ----------
      Par chapitre : cartes = flashcards sues ; ok = questions validées (dernière réponse juste) ;
@@ -68,7 +75,11 @@
   function sauver() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) { /* stockage indisponible : on continue sans */ } }
   function prog(id) {
     store.ch = store.ch || {};
+    var c = chapitre(id), version = (c && c.version) || 1;
+    /* Un chapitre refondu change de « version » : l'ancienne progression ne correspond plus aux positions. */
+    if (store.ch[id] && (store.ch[id].version || 1) !== version) { store.ch[id] = null; }
     var p = store.ch[id] = store.ch[id] || {};
+    if (version > 1) { p.version = version; }
     p.cartes = p.cartes || [];
     p.ok = p.ok || {};
     p.vu = p.vu || {};
@@ -77,12 +88,37 @@
   }
   function ajoute(liste, v) { if (liste.indexOf(v) < 0) { liste.push(v); } }
   function retire(liste, v) { var i = liste.indexOf(v); if (i >= 0) { liste.splice(i, 1); } }
-  function compte(c) {
+  /* Questions d'un chapitre, par type. Un « groupe » est ce que l'élève valide d'un bloc :
+     une question de QCM, ou une situation (un mini-cas et ses questions, ou une situation simple).
+     Les questions des situations sont numérotées à la suite, dans l'ordre du fichier. */
+  function donnees(c) {
+    if (c._donnees) { return c._donnees; }
+    var qcm = { items: [], groupes: [] }, sit = { items: [], groupes: [] };
+    c.qcm.forEach(function (d, i) {
+      qcm.items.push({ d: d });
+      qcm.groupes.push({ ids: [i], theme: d.theme, niveau: d.niveau });
+    });
+    c.situations.forEach(function (x) {
+      var ids = (x.questions || [x]).map(function (d) { sit.items.push({ d: d, s: x.s }); return sit.items.length - 1; });
+      sit.groupes.push({ ids: ids, theme: x.theme });
+    });
+    c._donnees = { qcm: qcm, situations: sit };
+    return c._donnees;
+  }
+  function groupeValide(p, type, g) { return g.ids.every(function (i) { return p.ok[type].indexOf(i) >= 0; }); }
+  function groupeVu(p, type, g) { return g.ids.some(function (i) { return p.vu[type].indexOf(i) >= 0; }); }
+  function valides(c, type, groupes) {
     var p = prog(c.id);
+    return (groupes || donnees(c)[type].groupes).filter(function (g) { return groupeValide(p, type, g); }).length;
+  }
+  /* La jauge du chapitre compte les flashcards, les questions de QCM et toutes les questions des situations. */
+  function compte(c) {
+    var p = prog(c.id), d = donnees(c);
     function n(liste, max) { return liste.filter(function (i) { return i < max; }).length; }
-    var r = { cartes: n(p.cartes, c.cartes.length), qcm: n(p.ok.qcm, c.qcm.length), situations: n(p.ok.situations, c.situations.length) };
-    r.total = c.cartes.length + c.qcm.length + c.situations.length;
-    r.fait = r.cartes + r.qcm + r.situations;
+    var r = { cartes: n(p.cartes, c.cartes.length), qcm: valides(c, "qcm"), situations: valides(c, "situations"),
+      questionsSit: n(p.ok.situations, d.situations.items.length) };
+    r.total = c.cartes.length + c.qcm.length + d.situations.items.length;
+    r.fait = r.cartes + r.qcm + r.questionsSit;
     r.pct = r.total ? Math.round(r.fait / r.total * 100) : 0;
     return r;
   }
@@ -110,15 +146,32 @@
     return el("div", { class: "bar" + (classe ? " " + classe : ""), role: "progressbar", "aria-valuemin": "0", "aria-valuemax": String(total), "aria-valuenow": String(valeur) }, i);
   }
   function ligneChapitre(c) {
-    var enCours = c.id === CFG.chapitreEnCours, ev = evaluation(), k = compte(c), nbJeux = (c.jeux || []).length;
+    var enCours = c.id === CFG.chapitreEnCours, ev = evaluation(), nbJeux = (c.jeux || []).length, nbDocs = (c.documents || []).length;
+    var extras = (nbJeux ? ", " + pluriel(nbJeux, "jeu", "jeux") : "") + (nbDocs ? ", " + pluriel(nbDocs, "document") : "");
+    if (!ouvert(c)) {
+      var dispo = [nbJeux ? pluriel(nbJeux, "jeu", "jeux") : "", nbDocs ? pluriel(nbDocs, "document") : ""].filter(Boolean).join(" et ");
+      return el("li", null,
+        el("a", { class: "ch-row is-locked", href: "#/chapitre/" + c.id },
+          el("span", { class: "ch-num", "aria-hidden": "true", text: String(c.id) }),
+          el("span", { class: "ch-name" }, "Chapitre " + c.id + " : " + c.titre,
+            enCours ? el("span", { class: "pill", text: "en cours en classe" }) : null,
+            el("small", { text: "Synthèse et entraînement à la fin du chapitre." + (dispo ? " Déjà ouvert : " + dispo + "." : "") })),
+          el("span", { class: "ch-pct ch-lock" }, cadenas(), el("span", { class: "sr-only", text: "Pas encore disponible" }))));
+    }
+    var k = compte(c);
     return el("li", null,
       el("a", { class: "ch-row", href: "#/chapitre/" + c.id },
         el("span", { class: "ch-num", "aria-hidden": "true", text: String(c.id) }),
         el("span", { class: "ch-name" }, "Chapitre " + c.id + " : " + c.titre,
           enCours ? el("span", { class: "pill", text: "en cours" }) : null,
           ev && ev.chapitre.id === c.id ? el("span", { class: "pill pill-eval", text: "évaluation " + ev.texte }) : null,
-          el("small", { text: pluriel(c.cartes.length, "flashcard") + ", " + c.qcm.length + " QCM, " + pluriel(c.situations.length, "situation") + (nbJeux ? ", " + pluriel(nbJeux, "jeu", "jeux") : "") })),
+          el("small", { text: pluriel(c.cartes.length, "flashcard") + ", " + c.qcm.length + " QCM, " + pluriel(c.situations.length, "situation") + extras })),
         el("span", { class: "ch-pct" }, el("b", { text: k.pct + " %" }), barre(k.fait, k.total, "mini"))));
+  }
+  function cadenas() {
+    var n = el("span", { class: "lock-icon", "aria-hidden": "true" });
+    n.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22"><rect x="4.5" y="10.5" width="15" height="10.5" rx="2.5" fill="currentColor"/><path d="M8 10.5V7.5a4 4 0 0 1 8 0v3" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>';
+    return n;
   }
   function listeParTheme() {
     var themes = [];
@@ -158,9 +211,11 @@
 
   /* ---------- Page : accueil ---------- */
   function pageAccueil() {
-    var enCours = chapitre(CFG.chapitreEnCours) || CH[CH.length - 1];
+    /* Le bouton « Réviser » mène au chapitre en cours s'il est ouvert, sinon au dernier chapitre ouvert. */
+    var enCours = chapitre(CFG.chapitreEnCours);
+    if (!enCours || !ouvert(enCours)) { enCours = CH_OUVERTS[CH_OUVERTS.length - 1]; }
     var nbCartes = 0, nbQ = 0, nbS = 0, fait = 0, total = 0;
-    CH.forEach(function (c) { var k = compte(c); nbCartes += c.cartes.length; nbQ += c.qcm.length; nbS += c.situations.length; fait += k.fait; total += k.total; });
+    CH_OUVERTS.forEach(function (c) { var k = compte(c); nbCartes += c.cartes.length; nbQ += c.qcm.length; nbS += c.situations.length; fait += k.fait; total += k.total; });
     var ev = evaluation(), jeux = tousLesJeux();
     var motsTitre = String(CFG.titre || "SGN").split(" "), dernierMot = motsTitre.pop();
     var pct = total ? Math.round(fait / total * 100) : 0;
@@ -168,13 +223,13 @@
     return [
       el("section", null,
         el("p", { class: "tag", text: (CFG.classe || "") + ", " + (CFG.matiere || "").toLowerCase() }),
-        el("h1", { class: "display" }, motsTitre.length ? motsTitre.join(" ") + " " : null, el("span", { class: "marker", text: dernierMot })),
+        el("h1", { class: "display display-logo" }, el("span", { class: "display-mark", html: LOGO }), el("span", null, motsTitre.length ? motsTitre.join(" ") + " " : null, el("span", { class: "marker", text: dernierMot }))),
         CFG.prof ? el("p", { class: "subtitle", text: CFG.prof }) : null,
         el("p", { class: "lead", text: "Pour chaque chapitre : la synthèse, le lexique des définitions et un entraînement avec des flashcards, des QCM et des situations. Tu t’arrêtes quand tu veux, ta progression est gardée." }),
         el("div", { class: "actions" },
           enCours ? el("a", { class: "btn btn-dark", href: "#/chapitre/" + enCours.id, text: "Réviser le chapitre " + enCours.id }) : null),
         el("div", { class: "stats" },
-          el("div", { class: "stat" }, el("b", { text: String(CH.length) }), el("span", { text: CH.length > 1 ? "chapitres" : "chapitre" })),
+          el("div", { class: "stat" }, el("b", { text: String(CH_OUVERTS.length) }), el("span", { text: CH_OUVERTS.length > 1 ? "chapitres à réviser" : "chapitre à réviser" })),
           el("div", { class: "stat" }, el("b", { text: String(nbCartes) }), el("span", { text: "flashcards" })),
           el("div", { class: "stat" }, el("b", { text: String(nbQ) }), el("span", { text: "questions de QCM" })),
           el("div", { class: "stat" }, el("b", { text: String(nbS) }), el("span", { text: "situations" })))),
@@ -184,14 +239,14 @@
         el("div", { class: "card eval" },
           el("p", { class: "eval-date" }, el("strong", { text: ev.texte.charAt(0).toUpperCase() + ev.texte.slice(1) }), el("span", { class: "pill", text: ev.delai })),
           el("p", { class: "eval-ch", text: "Chapitre " + ev.chapitre.id + " : " + ev.chapitre.titre }),
-          el("div", { class: "actions" },
-            el("a", { class: "btn btn-dark", href: "#/chapitre/" + ev.chapitre.id + "/entrainement", text: "M’entraîner sur le chapitre " + ev.chapitre.id })))) : null,
+          ouvert(ev.chapitre) ? el("div", { class: "actions" },
+            el("a", { class: "btn btn-dark", href: "#/chapitre/" + ev.chapitre.id + "/entrainement", text: "M’entraîner sur le chapitre " + ev.chapitre.id })) : null)) : null,
 
       el("section", null,
         el("h2", { class: "h2", text: "Ta progression" }),
         el("div", { class: "card" },
           el("div", { class: "row-between" },
-            el("strong", { text: pct + " % validé sur les " + pluriel(CH.length, "chapitre") }),
+            el("strong", { text: pct + " % validé sur " + (CH_OUVERTS.length > 1 ? "les " + CH_OUVERTS.length + " chapitres ouverts" : "le chapitre ouvert") }),
             el("span", { class: "soft", text: fait + " sur " + total + " flashcards et questions" })),
           barre(fait, total)),
         listeParTheme()),
@@ -206,7 +261,7 @@
           el("div", { class: "card step-card" }, el("h3", { text: "Synthèse" }), el("p", { text: "La synthèse du cours, telle que tu l’as en classe." })),
           el("div", { class: "card step-card" }, el("h3", { text: "Lexique" }), el("p", { text: "Toutes les définitions à connaître, une par notion." })),
           el("div", { class: "card step-card" }, el("h3", { text: "Entraînement" }), el("p", { text: "Flashcards, QCM et situations. Chaque bonne réponse est validée." })),
-          el("div", { class: "card step-card" }, el("h3", { text: "Jeux" }), el("p", { text: "Quand le chapitre en a un : une mise en situation à jouer." }))))
+          el("div", { class: "card step-card" }, el("h3", { text: "Jeux et documents" }), el("p", { text: "Quand le chapitre en a : une mise en situation à jouer, des TD à télécharger." }))))
     ];
   }
 
@@ -263,10 +318,22 @@
   }
 
   /* ---------- Onglet : lexique ---------- */
+  /* Une fiche peut regrouper plusieurs notions : { terme, def, sous: [{ terme, def }] }. */
+  function sousListe(k, carte) {
+    if (!k.sous || !k.sous.length) { return null; }
+    /* Dans une flashcard (un bouton), seules des balises <span> sont permises. */
+    return el(carte ? "span" : "ul", { class: carte ? "flash-sous" : "sous" }, k.sous.map(function (x) {
+      return el(carte ? "span" : "li", null, el("strong", { text: x.terme }), " : " + x.def);
+    }));
+  }
+  function texteFiche(k) {
+    return [k.terme, k.def].concat((k.sous || []).map(function (x) { return x.terme + " " + x.def; })).join(" ");
+  }
   function ongletLexique(c) {
     var sues = prog(c.id).cartes;
     var fiches = c.cartes.map(function (k, i) {
-      return { k: k, n: el("div", { class: sues.indexOf(i) >= 0 ? "known" : "" }, el("dt", { text: k.terme }), el("dd", { text: k.def })) };
+      return { k: k, n: el("div", { class: sues.indexOf(i) >= 0 ? "known" : "" }, el("dt", { text: k.terme }),
+        el("dd", null, k.def, sousListe(k))) };
     });
     var liste = el("dl", { class: "vocab" }, fiches.map(function (f) { return f.n; }));
     var vide = el("p", { class: "soft", hidden: true, text: "Aucune définition ne correspond." });
@@ -275,7 +342,7 @@
       oninput: function () {
         var q = norm(champ.value.trim()), n = 0;
         fiches.forEach(function (f) {
-          var ok = !q || norm(f.k.terme + " " + f.k.def).indexOf(q) >= 0;
+          var ok = !q || norm(texteFiche(f.k)).indexOf(q) >= 0;
           f.n.hidden = !ok; if (ok) { n++; }
         });
         vide.hidden = n > 0;
@@ -317,7 +384,8 @@
         el("span", { class: "flash-corner", text: "Chapitre " + c.id }),
         el("span", { class: "flash-side", text: "Définition" }),
         el("span", { class: "flash-term small", text: k.terme }),
-        el("span", { class: "flash-def", text: k.def }));
+        el("span", { class: "flash-def", text: k.def }),
+        sousListe(k, true));
       var face = el("button", { class: "flash", type: "button", "aria-pressed": "false" }, el("span", { class: "flash-inner" }, recto, verso));
       var annonce = el("p", { class: "sr-only", "aria-live": "polite" });
       var pile = el("div", { class: "flash-stack c-" + COULEURS[i % 3] + (file.length - pos - 1 > 0 ? " has-more" : "") }, face);
@@ -341,7 +409,7 @@
         face.setAttribute("aria-pressed", String(retournee));
         recto.setAttribute("aria-hidden", String(retournee));
         verso.setAttribute("aria-hidden", String(!retournee));
-        annonce.textContent = retournee ? "Définition : " + k.def : "";
+        annonce.textContent = retournee ? "Définition : " + texteFiche(k).slice(k.terme.length + 1) : "";
         boutons.style.visibility = "visible";
       });
       cont.appendChild(el("div", { class: "deck" }, jauge(), pile, annonce, boutons));
@@ -364,73 +432,115 @@
   }
 
   /* QCM et situations : d'abord les questions jamais vues, puis les ratées, puis les validées.
-     Pas de longueur imposée : chaque bonne réponse est validée tout de suite. */
-  function lancerQuestions(cont, c, type, retour) {
-    var p = prog(c.id), tous = c[type].map(function (q, i) { return i; });
+     Pas de longueur imposée : chaque bonne réponse est validée tout de suite.
+     Une situation à plusieurs questions (mini-cas) garde son texte affiché pendant toutes ses questions.
+     opts.groupes : les groupes à travailler (par défaut tout le type) ; opts.titre : le nom de l'activité. */
+  var NIVEAUX = { 1: "Niveau 1 · Je connais", 2: "Niveau 2 · Je réfléchis" };
+  function bonnes(d) { return [].concat(d.r); }
+  /* Consigne affichée sous la question, sauf si la question dit déjà quoi cocher. */
+  function consigne(d, multi) {
+    if (multi) { return "Plusieurs réponses sont justes : coche-les toutes, puis valide."; }
+    return /coche/i.test(d.q) ? "" : "Coche la bonne réponse.";
+  }
+  function lancerQuestions(cont, c, type, retour, opts) {
+    opts = opts || {};
+    var p = prog(c.id), D = donnees(c)[type], groupes = opts.groupes || D.groupes;
     var nom = type === "qcm" ? "question" : "situation";
-    var file = melanger(tous.filter(function (i) { return p.vu[type].indexOf(i) < 0; }))
-      .concat(melanger(tous.filter(function (i) { return p.vu[type].indexOf(i) >= 0 && p.ok[type].indexOf(i) < 0; })))
-      .concat(melanger(tous.filter(function (i) { return p.ok[type].indexOf(i) >= 0; })));
+    var ordre = melanger(groupes.filter(function (g) { return !groupeVu(p, type, g); }))
+      .concat(melanger(groupes.filter(function (g) { return groupeVu(p, type, g) && !groupeValide(p, type, g); })))
+      .concat(melanger(groupes.filter(function (g) { return groupeValide(p, type, g); })));
+    var file = [];
+    ordre.forEach(function (g) { g.ids.forEach(function (id, k) { file.push({ id: id, k: k, n: g.ids.length, theme: g.theme }); }); });
     var pos = 0, faites = 0, justes = 0, ratees = [];
     function jauge() {
-      var n = compte(c)[type];
-      return el("div", { class: "run-gauge" }, el("div", { class: "q-meta" },
-        el("span", { text: n + " sur " + c[type].length + " validées" }),
-        el("button", { class: "link-btn", type: "button", text: "J’arrête là", onclick: fin })), barre(n, c[type].length));
+      var n = valides(c, type, groupes);
+      return el("div", { class: "run-gauge" },
+        opts.titre ? el("p", { class: "run-title", text: opts.titre }) : null,
+        el("div", { class: "q-meta" },
+          el("span", { text: n + " sur " + groupes.length + (type === "qcm" ? " validées" : " situations validées") }),
+          el("button", { class: "link-btn", type: "button", text: "J’arrête là", onclick: fin })), barre(n, groupes.length));
     }
     function question() {
       vider(cont);
       if (pos >= file.length) { fin(); return; }
-      var i = file[pos], d = c[type][i];
-      var ordre = d.c.map(function (x, n) { return n; });
-      if (d.c.length > 2) { ordre = melanger(ordre); }
-      var lettres = ["A", "B", "C", "D", "E"];
+      var f = file[pos], it = D.items[f.id], d = it.d, multi = Array.isArray(d.r), justesIdx = bonnes(d);
+      var ordreChoix = d.c.map(function (x, n) { return n; });
+      if (d.c.length > 2) { ordreChoix = melanger(ordreChoix); }
+      var lettres = ["A", "B", "C", "D", "E", "F"];
       var retourZone = el("div", { "aria-live": "polite" });
-      var liste = el("div", { class: "choices" });
+      var liste = el("div", { class: "choices" + (multi ? " multi" : "") });
       var zoneJauge = el("div", null, jauge());
-      var boutons = ordre.map(function (idx, n) {
-        var b = el("button", { class: "choice", type: "button" }, el("kbd", { "aria-hidden": "true", text: lettres[n] }), el("span", { text: d.c[idx] }));
-        b.addEventListener("click", function () { repondre(idx, b); });
+      var choisis = [];
+      var valider = multi ? el("button", { class: "btn btn-dark", type: "button", text: "Valider", disabled: true, onclick: function () { repondre(choisis); } }) : null;
+      var boutons = ordreChoix.map(function (idx, n) {
+        var b = el("button", { class: "choice", type: "button", "aria-pressed": multi ? "false" : null },
+          el("kbd", { "aria-hidden": "true", text: lettres[n] }), el("span", { text: d.c[idx] }));
+        b.addEventListener("click", function () {
+          if (!multi) { repondre([idx]); return; }
+          var i2 = choisis.indexOf(idx);
+          if (i2 >= 0) { choisis.splice(i2, 1); } else { choisis.push(idx); }
+          b.classList.toggle("is-on", i2 < 0);
+          b.setAttribute("aria-pressed", String(i2 < 0));
+          valider.disabled = choisis.length === 0;
+        });
         liste.appendChild(b);
         return { idx: idx, b: b };
       });
-      function repondre(idx, bouton) {
-        var juste = idx === d.r;
-        boutons.forEach(function (x) { x.b.disabled = true; if (x.idx === d.r) { x.b.classList.add("is-ok"); } });
-        ajoute(p.vu[type], i); faites++;
-        if (juste) { justes++; ajoute(p.ok[type], i); }
-        else { bouton.classList.add("is-ko"); ratees.push(i); retire(p.ok[type], i); }
+      function repondre(choix) {
+        var juste = choix.length === justesIdx.length && choix.every(function (x) { return justesIdx.indexOf(x) >= 0; });
+        boutons.forEach(function (x) {
+          x.b.disabled = true;
+          x.b.classList.remove("is-on");
+          if (justesIdx.indexOf(x.idx) >= 0) { x.b.classList.add("is-ok"); }
+          else if (choix.indexOf(x.idx) >= 0) { x.b.classList.add("is-ko"); }
+        });
+        if (valider) { var z = valider.parentNode; z.parentNode.removeChild(z); }
+        ajoute(p.vu[type], f.id); faites++;
+        if (juste) { justes++; ajoute(p.ok[type], f.id); }
+        else { ratees.push(f.id); retire(p.ok[type], f.id); }
         sauver(); pos++;
         if (surProgression) { surProgression(); }
         vider(zoneJauge).appendChild(jauge());
-        var suivant = el("button", { class: "btn btn-dark", type: "button", text: pos >= file.length ? "Voir mon bilan" : (type === "qcm" ? "Question suivante" : "Situation suivante"), onclick: question });
+        var dansLeCas = f.k + 1 < f.n;
+        var suivant = el("button", { class: "btn btn-dark", type: "button", text: pos >= file.length ? "Voir mon bilan" : dansLeCas ? "Question suivante" : (type === "qcm" ? "Question suivante" : "Situation suivante"), onclick: question });
+        var reponse = justesIdx.map(function (x) { return d.c[x]; }).join(" ; ");
         retourZone.appendChild(el("div", { class: "feedback " + (juste ? "ok" : "ko") },
           el("b", { text: juste ? "Bonne réponse, c’est validé" : "Ce n’est pas ça" }),
-          el("span", { text: (juste ? "" : "La bonne réponse : " + d.c[d.r] + ". ") + d.e })));
+          el("span", { text: (juste ? "" : (multi ? "Les bonnes réponses : " : "La bonne réponse : ") + reponse + ". ") + d.e })));
         retourZone.appendChild(el("div", { class: "actions" }, suivant,
           pos < file.length ? el("button", { class: "btn", type: "button", text: "J’arrête là", onclick: fin }) : null));
         suivant.focus({ preventScroll: true });
       }
+      var etiquettes = [
+        d.niveau && NIVEAUX[d.niveau] ? el("span", { class: "pill pill-niveau n" + d.niveau, text: NIVEAUX[d.niveau] }) : null,
+        f.n > 1 ? el("span", { class: "pill", text: "Question " + (f.k + 1) + " sur " + f.n }) : null
+      ].filter(Boolean);
       cont.appendChild(el("div", { class: "quiz" },
         zoneJauge,
-        d.s ? el("p", { class: "scenario" }, el("span", { class: "ex-label", text: "Situation" }), d.s) : null,
-        el("h2", { class: "q-text", text: d.q }),
-        liste, retourZone));
-      remonter(cont);
+        it.s ? el("p", { class: "scenario" }, el("span", { class: "ex-label", text: "Situation" }), it.s) : null,
+        etiquettes.length ? el("p", { class: "q-tags" }, etiquettes) : null,
+        el("h2", { class: "q-text" + (etiquettes.length ? " with-tags" : ""), text: d.q }),
+        consigne(d, multi) ? el("p", { class: "q-hint", text: consigne(d, multi) }) : null,
+        liste,
+        valider ? el("div", { class: "actions" }, valider) : null,
+        retourZone));
+      /* Dans un mini-cas, on garde le texte à l'écran : on ne remonte qu'au début d'une nouvelle situation. */
+      if (f.k === 0) { remonter(cont); }
       if (faites > 0) { boutons[0].b.focus({ preventScroll: true }); }
     }
     function fin() {
       vider(cont);
-      var n = compte(c)[type], total = c[type].length;
+      var n = valides(c, type, groupes), total = groupes.length;
       cont.appendChild(el("div", { class: "quiz" },
-        el("h2", { class: "syn-h3", text: faites === 0 ? (type === "qcm" ? "QCM" : "Situations") : "Cette fois : " + pluriel(faites, nom) + ", " + pluriel(justes, "bonne réponse", "bonnes réponses") }),
+        opts.titre ? el("p", { class: "run-title", text: opts.titre }) : null,
+        el("h2", { class: "syn-h3", text: faites === 0 ? (type === "qcm" ? "QCM" : "Situations") : "Cette fois : " + pluriel(faites, "question") + ", " + pluriel(justes, "bonne réponse", "bonnes réponses") }),
         el("p", { class: "score", text: n + " / " + total }),
-        el("p", { class: "lead", text: n === total ? "Tu as tout validé sur cette activité." : (type === "qcm" ? "Questions validées" : "Situations validées") + " sur ce chapitre. Les autres reviendront en premier la prochaine fois." }),
+        el("p", { class: "lead", text: n === total ? "Tu as tout validé sur cette activité." : (type === "qcm" ? "Questions validées." : "Situations validées (une situation est validée quand toutes ses questions sont justes).") + " Les autres reviendront en premier la prochaine fois." }),
         ratees.length ? el("div", null,
           el("h3", { class: "syn-h3", text: "À revoir" }),
           el("ul", { class: "review" }, ratees.filter(function (x, n2, a) { return a.indexOf(x) === n2; }).map(function (i) {
-            var d = c[type][i];
-            return el("li", null, el("b", { text: (d.s ? d.s + " " : "") + d.q }), el("span", { text: "Réponse : " + d.c[d.r] + ". " + d.e }));
+            var it = D.items[i], d = it.d;
+            return el("li", null, el("b", { text: (it.s ? it.s + " " : "") + d.q }), el("span", { text: "Réponse : " + bonnes(d).map(function (x) { return d.c[x]; }).join(" ; ") + ". " + d.e }));
           }))) : null,
         el("div", { class: "actions" },
           pos < file.length ? el("button", { class: "btn btn-dark", type: "button", text: "Continuer", onclick: question }) : null,
@@ -446,21 +556,111 @@
       vider(zone);
       majEntete();
       var k = compte(c);
-      function activite(titre, quoi, fait, total, mot, lancer) {
+      function activite(titre, quoi, fait, total, mot, lancer, texteBouton) {
         return el("div", { class: "card act" },
           el("div", { class: "act-txt" }, el("h3", { text: titre }), el("p", { class: "soft", text: quoi })),
           el("div", { class: "act-gauge" }, el("strong", { text: fait + " / " + total + " " + mot }), barre(fait, total)),
-          el("button", { class: "btn btn-dark", type: "button", text: fait === 0 ? "Commencer" : fait === total ? "Refaire" : "Continuer", onclick: lancer }));
+          el("button", { class: "btn btn-dark", type: "button", text: texteBouton || (fait === 0 ? "Commencer" : fait === total ? "Refaire" : "Continuer"), onclick: lancer }));
       }
+      var flash = activite("Flashcards", "Devine la définition, puis retourne la carte.", k.cartes, c.cartes.length, "sues", function () { lancerFlashcards(zone, c, menu); });
+
+      /* Chapitre sans thèmes : Flashcards, QCM, Situations. */
+      if (!c.themes || !c.themes.length) {
+        zone.appendChild(el("div", { class: "acts" },
+          el("p", { class: "lead", text: "Tu t’arrêtes quand tu veux : chaque bonne réponse est validée et gardée pour la prochaine fois." }),
+          flash,
+          activite("QCM", "Des questions de cours, corrigées une par une.", k.qcm, c.qcm.length, "validées", function () { lancerQuestions(zone, c, "qcm", menu); }),
+          activite("Situations", "Des mini-cas où tu appliques le cours.", k.situations, c.situations.length, "validées", function () { lancerQuestions(zone, c, "situations", menu); })));
+        remonter(zone);
+        return;
+      }
+
+      /* Chapitre avec thèmes : les trois mêmes activités. QCM et Situations ouvrent la liste des thèmes ;
+         pour les QCM, un thème ouvre ensuite le choix du niveau. */
       zone.appendChild(el("div", { class: "acts" },
         el("p", { class: "lead", text: "Tu t’arrêtes quand tu veux : chaque bonne réponse est validée et gardée pour la prochaine fois." }),
-        activite("Flashcards", "Devine la définition, puis retourne la carte.", k.cartes, c.cartes.length, "sues", function () { lancerFlashcards(zone, c, menu); }),
-        activite("QCM", "Des questions de cours, corrigées une par une.", k.qcm, c.qcm.length, "validées", function () { lancerQuestions(zone, c, "qcm", menu); }),
-        activite("Situations", "Des mini-cas où tu appliques le cours.", k.situations, c.situations.length, "validées", function () { lancerQuestions(zone, c, "situations", menu); })));
+        flash,
+        activite("QCM", "Choisis un thème, puis le niveau 1 ou le niveau 2.", k.qcm, c.qcm.length, "validées", choisirQcm, "Choisir"),
+        activite("Situations", "Des mini-cas où tu appliques le cours. Choisis un thème.", k.situations, c.situations.length, "validées", choisirSituations, "Choisir")));
       remonter(zone);
+    }
+
+    /* Écrans de choix (chapitre avec thèmes) */
+    function ecran(titre, retour, lignes) {
+      vider(zone);
+      majEntete();
+      zone.appendChild(el("div", { class: "acts" },
+        el("div", null, el("button", { class: "btn", type: "button", text: "← Retour", onclick: retour })),
+        el("section", { class: "card t-block" }, el("h3", { text: titre }), lignes)));
+      remonter(zone);
+    }
+    function ligne(titre, quoi, type, groupes, texteBouton, action) {
+      if (!groupes.length) { return null; }
+      var fait = valides(c, type, groupes);
+      return el("div", { class: "t-row" },
+        el("div", { class: "t-txt" }, el("strong", { text: titre }), quoi ? el("span", { class: "soft", text: quoi }) : null),
+        el("div", { class: "t-gauge" }, el("span", { class: "t-count", text: fait + " / " + groupes.length }), barre(fait, groupes.length, "mini")),
+        el("button", { class: "btn btn-dark", type: "button", text: texteBouton || (fait === 0 ? "Commencer" : fait === groupes.length ? "Refaire" : "Continuer"), onclick: action }));
+    }
+    function lancer(type, groupes, titre, retour) {
+      return function () { lancerQuestions(zone, c, type, retour, { groupes: groupes, titre: titre }); };
+    }
+    function duTheme(type, t) { return donnees(c)[type].groupes.filter(function (g) { return g.theme === t; }); }
+    function choisirQcm() {
+      var D = donnees(c);
+      ecran("QCM : choisis un thème", menu, [
+        c.themes.map(function (nomT, i) {
+          return ligne(nomDuTheme(nomT), null, "qcm", duTheme("qcm", i + 1), "Choisir", function () { choisirNiveau(i + 1); });
+        }),
+        ligne("Tout le chapitre mélangé", "Les deux niveaux", "qcm", D.qcm.groupes, null, lancer("qcm", D.qcm.groupes, "Tous les QCM du chapitre", choisirQcm))
+      ]);
+    }
+    function choisirNiveau(t) {
+      var nomT = nomDuTheme(c.themes[t - 1]);
+      function niveau(n) { return duTheme("qcm", t).filter(function (g) { return g.niveau === n; }); }
+      function retour() { choisirNiveau(t); }
+      ecran(nomT, choisirQcm, [
+        ligne("Niveau 1", "Je connais", "qcm", niveau(1), null, lancer("qcm", niveau(1), nomT + " · Niveau 1", retour)),
+        ligne("Niveau 2", "Je réfléchis", "qcm", niveau(2), null, lancer("qcm", niveau(2), nomT + " · Niveau 2", retour))
+      ]);
+    }
+    function choisirSituations() {
+      var D = donnees(c);
+      ecran("Situations : choisis un thème", menu, [
+        c.themes.map(function (nomT, i) {
+          var g = duTheme("situations", i + 1);
+          return ligne(nomDuTheme(nomT), pluriel(g.length, "mini-cas", "mini-cas"), "situations", g, null, lancer("situations", g, nomDuTheme(nomT) + " · Situations", choisirSituations));
+        }),
+        ligne("Toutes les situations mélangées", null, "situations", D.situations.groupes, null, lancer("situations", D.situations.groupes, "Toutes les situations du chapitre", choisirSituations))
+      ]);
     }
     menu();
     return zone;
+  }
+
+  /* ---------- Onglet : documents (TD, fiches…) ----------
+     Un document : { titre, description, lien, ajout: "AAAA-MM-JJ" }. Jamais de corrigé. */
+  function ongletDocuments(c) {
+    var docs = (c.documents || []).slice().sort(function (a, b) { return String(b.ajout || "").localeCompare(String(a.ajout || "")); });
+    return el("div", { class: "docs" },
+      el("p", { class: "lead", text: "Les documents distribués en classe pour ce chapitre." }),
+      docs.length ? el("ul", { class: "doc-list" }, docs.map(function (d) {
+        return el("li", null, el("a", { class: "card doc", href: d.lien, target: "_blank", rel: "noopener" },
+          el("span", { class: "doc-txt" }, el("strong", { text: d.titre }), d.description ? el("span", { class: "soft", text: d.description }) : null),
+          el("span", { class: "btn btn-dark", text: "Ouvrir" })));
+      })) : el("p", { class: "soft", text: "Aucun document pour l’instant." }));
+  }
+
+  /* ---------- Chapitre verrouillé : message à la place de la synthèse, du lexique et de l'entraînement ---------- */
+  function ongletVerrouille(c) {
+    var autres = [];
+    if (c.jeux && c.jeux.length) { autres.push(el("a", { class: "btn btn-dark", href: "#/chapitre/" + c.id + "/jeux", text: "Voir le jeu du chapitre" })); }
+    if (c.documents && c.documents.length) { autres.push(el("a", { class: "btn", href: "#/chapitre/" + c.id + "/documents", text: "Voir les documents" })); }
+    return el("div", { class: "card locked-card" },
+      el("span", { class: "locked-icon" }, cadenas()),
+      el("h2", { class: "syn-h3", text: "Pas encore disponible" }),
+      el("p", { text: "Ce chapitre est en cours en classe. La synthèse, le lexique et l’entraînement s’ouvriront quand nous l’aurons terminé." }),
+      autres.length ? el("div", { class: "actions" }, autres) : null);
   }
 
   /* ---------- Onglet : jeux ---------- */
@@ -474,9 +674,14 @@
   function pageChapitre(c, ongletId) {
     var anciens = { cartes: "entrainement", qcm: "entrainement", situations: "entrainement" };
     ongletId = anciens[ongletId] || ongletId;
+    var libre = ouvert(c);
     var onglets = [["synthese", "Synthèse"], ["lexique", "Lexique"], ["entrainement", "Entraînement"]];
+    if (c.documents && c.documents.length) { onglets.push(["documents", "Documents"]); }
     if (c.jeux && c.jeux.length) { onglets.push(["jeux", "Jeux"]); }
-    var actif = onglets.filter(function (o) { return o[0] === ongletId; })[0] || onglets[0];
+    var fermes = libre ? [] : ["synthese", "lexique", "entrainement"];
+    var accessibles = onglets.filter(function (o) { return fermes.indexOf(o[0]) < 0; });
+    /* Chapitre verrouillé : on ouvre par défaut le jeu ou les documents. */
+    var actif = onglets.filter(function (o) { return o[0] === ongletId; })[0] || accessibles[0] || onglets[0];
     var ev = evaluation();
 
     var entete = el("div", { class: "ch-gauge" });
@@ -491,8 +696,10 @@
     majEntete();
     surProgression = majEntete;
 
-    var contenu = actif[0] === "lexique" ? ongletLexique(c)
+    var contenu = fermes.indexOf(actif[0]) >= 0 ? ongletVerrouille(c)
+      : actif[0] === "lexique" ? ongletLexique(c)
       : actif[0] === "entrainement" ? ongletEntrainement(c, majEntete)
+      : actif[0] === "documents" ? ongletDocuments(c)
       : actif[0] === "jeux" ? ongletJeux(c)
       : ongletSynthese(c);
 
@@ -502,9 +709,11 @@
       el("h1", { class: "title", text: c.titre }),
       el("p", { class: "question", text: c.question }),
       ev && ev.chapitre.id === c.id ? el("p", { class: "tag eval-tag", text: "Évaluation " + ev.texte + ", " + ev.delai }) : null,
-      entete,
+      libre ? entete : el("p", { class: "tag lock-tag", text: "Chapitre en cours en classe : synthèse et entraînement bientôt disponibles" }),
       el("nav", { class: "tabs tabs-" + onglets.length, id: "onglets", "aria-label": "Les rubriques du chapitre" }, onglets.map(function (o) {
-        return el("a", { href: "#/chapitre/" + c.id + "/" + o[0], "aria-current": o[0] === actif[0] ? "page" : null, text: o[1] });
+        var ferme = fermes.indexOf(o[0]) >= 0;
+        return el("a", { href: "#/chapitre/" + c.id + "/" + o[0], class: ferme ? "is-locked" : null, "aria-current": o[0] === actif[0] ? "page" : null },
+          ferme ? cadenas() : null, ferme ? el("span", { class: "sr-only", text: "Verrouillé : " }) : null, o[1]);
       })),
       contenu
     ];

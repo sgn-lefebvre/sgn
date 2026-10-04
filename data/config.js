@@ -3,7 +3,7 @@
    son fichier data/chXX.js est chargé dans index.html. */
 window.SGN = {
   config: {
-    titre: "Objectif SGN",
+    titre: "Révision SGN",
     prof: "M. Lefebvre",
     classe: "1re STMG",
     matiere: "Sciences de gestion et numérique",
