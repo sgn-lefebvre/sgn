@@ -253,6 +253,11 @@ tbody th { font-weight: 700; }
 .locked-card .lock-icon svg { width: 26px; height: 26px; }
 .locked-card .actions { margin-bottom: 0; }
 
+/* Indication « Fais glisser le tableau → », affichée seulement si le tableau dépasse de l'écran */
+.table-hint { margin: 0 0 6px; text-align: right; font-weight: 700; font-size: .92rem; color: var(--ink-soft); }
+.table-hint[hidden] { display: none; }
+@media print { .table-hint { display: none !important; } }
+
 /* Partager le site : le QR code reste noir sur blanc, même en mode sombre, pour être lisible par tous les téléphones */
 .share { display: flex; align-items: center; gap: 24px; }
 .share-qr { flex: none; display: block; background: #fff; padding: 6px; border-radius: var(--r-sm); border: 1px solid var(--line); line-height: 0; }

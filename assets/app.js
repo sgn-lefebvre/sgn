@@ -324,9 +324,20 @@
         return (b.rowHead && i === 0) ? el("th", { scope: "row", html: c }) : el("td", { html: c });
       }));
     }));
-    return el("div", { class: "table-wrap", tabindex: "0", role: "region", "aria-label": b.titre || "Tableau" },
+    /* Si le tableau est plus large que l'écran (téléphone), une indication invite à le faire glisser. */
+    var wrap = el("div", { class: "table-wrap", tabindex: "0", role: "region", "aria-label": b.titre || "Tableau",
+        onscroll: function () { if (wrap.scrollLeft > 10) { indice.hidden = true; } } },
       el("table", { class: deux ? "two" : "" }, b.titre ? el("caption", { text: b.titre }) : null, thead, tbody));
+    var indice = el("p", { class: "table-hint", hidden: true, "aria-hidden": "true", text: "Fais glisser le tableau →" });
+    return el("div", { class: "table-block" }, indice, wrap);
   }
+  function majIndicesTableaux() {
+    Array.prototype.forEach.call(document.querySelectorAll(".table-block"), function (bloc) {
+      var wrap = bloc.querySelector(".table-wrap"), indice = bloc.querySelector(".table-hint");
+      indice.hidden = !(wrap.scrollWidth > wrap.clientWidth + 2) || wrap.scrollLeft > 10;
+    });
+  }
+  window.addEventListener("resize", majIndicesTableaux);
   function bloc(b) {
     switch (b.t) {
       case "h": return el("h2", { class: "syn-h", text: b.txt });
@@ -775,6 +786,7 @@
 
     vider(app);
     contenu.forEach(function add(n) { if (Array.isArray(n)) { n.forEach(add); } else if (n) { app.appendChild(n); } });
+    majIndicesTableaux();
 
     Array.prototype.forEach.call(document.querySelectorAll("[data-nav]"), function (a) {
       if (a.getAttribute("data-nav") === nav) { a.setAttribute("aria-current", "page"); } else { a.removeAttribute("aria-current"); }
