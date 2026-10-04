@@ -324,9 +324,8 @@
         return (b.rowHead && i === 0) ? el("th", { scope: "row", html: c }) : el("td", { html: c });
       }));
     }));
-    /* Si le tableau est plus large que l'écran (téléphone), une indication invite à le faire glisser. */
-    var wrap = el("div", { class: "table-wrap", tabindex: "0", role: "region", "aria-label": b.titre || "Tableau",
-        onscroll: function () { if (wrap.scrollLeft > 10) { indice.hidden = true; } } },
+    /* Si le tableau est plus large que l'écran (téléphone), une indication invite à le faire glisser. Elle reste affichée. */
+    var wrap = el("div", { class: "table-wrap", tabindex: "0", role: "region", "aria-label": b.titre || "Tableau" },
       el("table", { class: deux ? "two" : "" }, b.titre ? el("caption", { text: b.titre }) : null, thead, tbody));
     var indice = el("p", { class: "table-hint", hidden: true, "aria-hidden": "true", text: "Fais glisser le tableau →" });
     return el("div", { class: "table-block" }, indice, wrap);
@@ -334,7 +333,7 @@
   function majIndicesTableaux() {
     Array.prototype.forEach.call(document.querySelectorAll(".table-block"), function (bloc) {
       var wrap = bloc.querySelector(".table-wrap"), indice = bloc.querySelector(".table-hint");
-      indice.hidden = !(wrap.scrollWidth > wrap.clientWidth + 2) || wrap.scrollLeft > 10;
+      indice.hidden = !(wrap.scrollWidth > wrap.clientWidth + 2);
     });
   }
   window.addEventListener("resize", majIndicesTableaux);
