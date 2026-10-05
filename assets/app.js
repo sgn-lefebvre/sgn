@@ -1198,6 +1198,26 @@
     }
   });
 
+  /* Retour sur la page (autre appli, téléphone rallumé, autre onglet) : on va chercher ce qui a été fait sur un autre appareil
+     avec le même code. Au plus une fois par minute ; l'écran n'est redessiné que si quelque chose a changé, et jamais
+     en pleine série de questions (seule la jauge du chapitre est mise à jour). */
+  var derniereRecup = Date.now();
+  function auRetour() {
+    if (document.visibilityState !== "visible" || !COMPTES || !COMPTES.code()) { return; }
+    if (Date.now() - derniereRecup < 60000) { return; }
+    derniereRecup = Date.now();
+    COMPTES.recuperer().then(function (r) {
+      if (r && r.refuse) { afficher(); return; }
+      if (!r || !r.ok) { return; }
+      var avant = JSON.stringify(exporterProgression());
+      fusionnerProgression(r.progression);
+      if (JSON.stringify(exporterProgression()) === avant) { return; }
+      if (location.hash.indexOf("/entrainement/") < 0) { afficher(); } else if (surProgression) { surProgression(); }
+    });
+  }
+  document.addEventListener("visibilitychange", auRetour);
+  window.addEventListener("focus", auRetour);
+
   /* Au retour d'un jeu (bouton Précédent du navigateur), la page est réaffichée pour montrer « terminé ». */
   window.addEventListener("pageshow", function (e) { if (e.persisted) { afficher(); } });
   window.addEventListener("hashchange", afficher);
