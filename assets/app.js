@@ -72,7 +72,34 @@
     } catch (e) { /* stockage indisponible */ }
     return {};
   })();
-  function sauver() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) { /* stockage indisponible : on continue sans */ } }
+  function sauverLocal() { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch (e) { /* stockage indisponible : on continue sans */ } }
+  function sauver() {
+    sauverLocal();
+    if (COMPTES && COMPTES.code()) { COMPTES.planifierEnvoi(exporterProgression()); }
+  }
+
+  /* ---------- Codes élèves (assets/comptes.js) : la progression est aussi gardée en ligne ----------
+     Sur l'appareil comme en ligne, une question validée quelque part reste validée partout (on additionne). */
+  var COMPTES = window.SGN_COMPTES && window.SGN_COMPTES.actif ? window.SGN_COMPTES : null;
+  function exporterProgression() {
+    return CH.filter(function (c) { return store.ch && store.ch[c.id]; }).map(function (c) {
+      var p = prog(c.id);
+      return { id: c.id, version: c.version || 1, cartes: p.cartes, okQcm: p.ok.qcm, vuQcm: p.vu.qcm, okSit: p.ok.situations, vuSit: p.vu.situations };
+    });
+  }
+  function fusionnerProgression(lignes) {
+    (lignes || []).forEach(function (l) {
+      var c = chapitre(Number(l.id));
+      if (!c || (Number(l.version) || 1) !== (c.version || 1)) { return; }   /* ancienne version d'un chapitre refondu */
+      var p = prog(c.id);
+      (l.cartes || []).forEach(function (i) { ajoute(p.cartes, i); });
+      (l.okQcm || []).forEach(function (i) { ajoute(p.ok.qcm, i); });
+      (l.vuQcm || []).forEach(function (i) { ajoute(p.vu.qcm, i); });
+      (l.okSit || []).forEach(function (i) { ajoute(p.ok.situations, i); });
+      (l.vuSit || []).forEach(function (i) { ajoute(p.vu.situations, i); });
+    });
+    sauverLocal();
+  }
   function prog(id) {
     store.ch = store.ch || {};
     var c = chapitre(id), version = (c && c.version) || 1;
@@ -822,6 +849,95 @@
     ].concat([{ repris: repris, onglet: actif[0] }]);
   }
 
+  /* ---------- Codes élèves : écran du code et bouton de la barre du haut ---------- */
+  /* Récupère la progression en ligne et l'ajoute à celle de l'appareil. Si Google ne répond pas, nouvel essai plus tard. */
+  function synchroniser(essai) {
+    essai = essai || 1;
+    COMPTES.recuperer().then(function (r) {
+      if (!r) { if (essai < 6) { window.setTimeout(function () { synchroniser(essai + 1); }, 30000); } return; }
+      if (r.refuse) {
+        window.alert("Le code " + r.code + " n’est pas reconnu : vérifie-le, ou demande-le à " + (CFG.prof || "ton professeur") + ". Ce que tu as fait reste enregistré sur cet appareil.");
+        afficher();
+        return;
+      }
+      fusionnerProgression(r.progression);
+      COMPTES.planifierEnvoi(exporterProgression());
+      /* On rafraîchit l'affichage, sauf en pleine série pour ne pas déranger l'élève. */
+      if (location.hash.indexOf("/entrainement/") < 0) { afficher(); }
+    });
+  }
+  var MESSAGES_CODE = {
+    format: "Un code a 6 caractères, par exemple K7P-4MX.",
+    code: "Code inconnu. Vérifie-le, ou demande-le à " + (CFG.prof || "ton professeur") + ".",
+    trop: "Trop d’essais en peu de temps. Réessaie dans quelques minutes.",
+    reseau: "Pas de connexion à Internet. Réessaie, ou continue sans code.",
+    serveur: "Le service ne répond pas. Réessaie plus tard, ou continue sans code."
+  };
+  function pageCode() {
+    var champ = el("input", { class: "code-champ", type: "text", inputmode: "text", autocomplete: "off", autocapitalize: "characters", spellcheck: "false",
+      maxlength: "9", placeholder: "K7P-4MX", "aria-label": "Ton code personnel" });
+    var erreur = el("p", { class: "code-erreur", role: "alert" });
+    var bouton = el("button", { class: "btn btn-dark", type: "submit", text: "Me connecter" });
+    var form = el("form", { class: "code-form", onsubmit: function (ev) {
+      ev.preventDefault();
+      erreur.textContent = ""; bouton.disabled = true; bouton.textContent = "Connexion…";
+      var patience = window.setTimeout(function () { bouton.textContent = "Connexion… encore un instant"; }, 4000);
+      COMPTES.connecter(champ.value).then(function (r) {
+        window.clearTimeout(patience);
+        bouton.disabled = false; bouton.textContent = "Me connecter";
+        if (!r.ok) { erreur.textContent = MESSAGES_CODE[r.erreur] || MESSAGES_CODE.serveur; champ.focus(); return; }
+        fusionnerProgression(r.progression);
+        if (r.provisoire) { synchroniser(); } else { COMPTES.planifierEnvoi(exporterProgression()); }
+        location.hash = "#/";
+        afficher();
+      });
+    } }, el("label", { class: "code-label", text: "Entre ton code personnel :" }), el("div", { class: "code-ligne" }, champ, bouton), erreur);
+    var dejaVisiteur = COMPTES.choix() === "visiteur";
+    return [
+      el("section", { class: "code-page" },
+        el("h1", { class: "title", text: CFG.titre || "Révision SGN" }),
+        el("p", { class: "subtitle", text: CFG.prof || "" }),
+        el("div", { class: "card code-card" },
+          form,
+          el("p", { class: "soft code-aide", text: "Avec ton code, ta progression est gardée en ligne : tu la retrouves sur ton téléphone comme sur les ordinateurs du lycée." }),
+          el("p", { class: "code-ou", text: "ou" }),
+          el("button", { class: "btn", type: "button", text: dejaVisiteur ? "Revenir sans code" : "Continuer sans code",
+            onclick: function () { COMPTES.continuerSansCode(); location.hash = "#/"; afficher(); } }),
+          el("p", { class: "soft code-aide", text: "Sans code, ta progression reste seulement sur cet appareil." })))
+    ];
+  }
+  /* Bouton de la barre du haut : le code de l'élève (pour se déconnecter) ou « Me connecter » */
+  var zoneCompte = null;
+  function majCompte() {
+    if (!COMPTES) { return; }
+    var texte = document.getElementById("texte-progression");
+    if (texte) { texte.textContent = COMPTES.code()
+      ? "Connecté avec ton code : ta progression est enregistrée sur cet appareil et en ligne, pour ton professeur."
+      : "Sans code, ta progression est enregistrée sur cet appareil seulement."; }
+    if (!zoneCompte) {
+      zoneCompte = el("div", { class: "compte" });
+      var top = document.querySelector(".top-in");
+      top.insertBefore(zoneCompte, document.getElementById("theme-btn"));
+    }
+    vider(zoneCompte);
+    var code = COMPTES.code();
+    if (code) {
+      zoneCompte.appendChild(el("button", { class: "compte-btn", type: "button", title: "Me déconnecter",
+        "aria-label": "Connecté avec le code " + code + ". Me déconnecter",
+        onclick: function () {
+          if (!window.confirm("Te déconnecter ? Ta progression reste enregistrée en ligne avec ton code " + code + ". Sur cet appareil, elle sera effacée (pratique sur un ordinateur du lycée).")) { return; }
+          COMPTES.deconnecter();
+          store = {}; memoire = { chap: null };
+          try { localStorage.removeItem(KEY); } catch (e) { /* stockage indisponible */ }
+          location.hash = "#/";
+          afficher();
+        } }, el("span", { class: "compte-code", text: code }),
+        el("span", { class: "compte-sortir" }, el("span", { class: "compte-long", text: "Me déconnecter" }), el("span", { class: "compte-court", text: "Quitter" }))));
+    } else if (COMPTES.choix()) {
+      zoneCompte.appendChild(el("a", { class: "compte-btn", href: "#/connexion", text: "Me connecter" }));
+    }
+  }
+
   /* ---------- Navigation ---------- */
   var derniereCle = null, adresseActuelle = location.hash, adressePrecedente = null;
   function afficher() {
@@ -832,6 +948,7 @@
     }
     var parts = location.hash.replace(/^#\/?/, "").split("/").filter(Boolean);
     var nav = "accueil", contenu, cle = "accueil";
+    majCompte();
     if (parts[0] === "chapitres") { nav = "chapitres"; cle = "chapitres"; contenu = pageChapitres(); }
     else if (parts[0] === "partager") { nav = ""; cle = "partager"; contenu = pagePartager(); }
     else if (parts[0] === "chapitre" && chapitre(Number(parts[1]))) {
@@ -839,6 +956,8 @@
       contenu = pageChapitre(chapitre(Number(parts[1])), parts[2], parts.slice(3));
     }
     else { contenu = pageAccueil(); }
+    /* Codes élèves : à la première visite (ou sur « Me connecter »), l'écran du code passe avant tout le reste. */
+    if (COMPTES && (!COMPTES.choix() || parts[0] === "connexion")) { nav = ""; cle = "connexion"; contenu = pageCode(); }
 
     var info = {};
     vider(app);
@@ -879,7 +998,10 @@
   majTheme();
 
   document.getElementById("reset-btn").addEventListener("click", function () {
-    if (window.confirm("Effacer toute ta progression sur cet appareil (flashcards sues, questions validées, jeux terminés) ?")) {
+    var message = COMPTES && COMPTES.code()
+      ? "Effacer la progression gardée sur cet appareil ? Celle enregistrée en ligne avec ton code est conservée et reviendra à ta prochaine connexion."
+      : "Effacer toute ta progression sur cet appareil (flashcards sues, questions validées, jeux terminés) ?";
+    if (window.confirm(message)) {
       store = {};
       try {
         localStorage.removeItem(KEY);
@@ -894,5 +1016,8 @@
   window.addEventListener("pageshow", function (e) { if (e.persisted) { afficher(); } });
   window.addEventListener("hashchange", afficher);
   if (!CH.length) { app.appendChild(el("p", { class: "lead", text: "Aucun chapitre n’est encore ouvert." })); }
-  else { afficher(); }
+  else {
+    afficher();
+    if (COMPTES && COMPTES.code()) { synchroniser(); }
+  }
 })();

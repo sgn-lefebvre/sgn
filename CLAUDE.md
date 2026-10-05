@@ -15,6 +15,8 @@ Aucun framework, aucune étape de build : HTML, CSS et JavaScript simples.
 - `assets/app.js` : le moteur (navigation par `#/…`, onglets, entraînement, progression). Aucun contenu de cours.
 - `assets/style.css` : le style. Les couleurs sont des variables en haut du fichier.
 - `assets/fonts/` : polices hébergées dans le site (licence OFL). Ne pas les remplacer par un appel à Google Fonts.
+- `assets/comptes.js` : les codes élèves et la progression en ligne (voir « Codes élèves »). Ne fait rien tant que `comptes.adresse` est vide dans `data/config.js`.
+- `prof.html` : la page de suivi du professeur (aucun lien vers elle sur le site, protégée par le mot de passe du script Google).
 - `assets/qr-site.svg` : le QR code vers l'adresse publique du site (`adresse` dans `data/config.js`). Il s'affiche en bas de l'accueil (« Partager le site ») et en grand sur la page `#/partager`, avec un bouton « Partager » (téléphones) et « Copier le lien ». Si l'adresse du site change, refaire le QR code et vérifier qu'il se décode bien.
 - `data/config.js` : titre, professeur, chapitre en cours, prochaine évaluation, noms des thèmes.
 - `data/chXX.js` : un fichier par chapitre.
@@ -76,7 +78,7 @@ Une jauge indique ce qui est validé, par activité et par chapitre. La jauge du
 - Chapitre 2 : pas de question sur les « mécanismes internes » ni sur « l'intérêt du contrôle de soi ».
 - Les zones de la proxémie : ne pas interroger sur les distances chiffrées.
 - Ne jamais mettre en ligne les corrigés de cours, de TD ou de DS.
-- Aucune donnée d'élève dans le site. La progression reste dans le navigateur de l'élève (`localStorage`).
+- Aucune donnée d'élève dans le site publié. Sans code, la progression reste dans le navigateur de l'élève (`localStorage`). Avec les codes élèves, elle est aussi rangée dans la feuille Google du professeur, **sous forme de codes seulement, jamais de noms**.
 - Écrire les apostrophes en typographique (’) et les guillemets en « » dans les textes.
 
 ## Construire un chapitre (méthode complète)
@@ -102,6 +104,21 @@ Quand le professeur dit « construis le chapitre N » :
 1. Ranger le fichier dans `documents/chXX/` (PDF de préférence).
 2. L'ajouter à la liste `documents` du chapitre : `{ titre, description, lien, ajout }`.
 3. Jamais de corrigé de cours, de TD ou de DS.
+
+## Codes élèves (progression en ligne et suivi du professeur)
+
+- **Principe** : chaque élève a un code de 6 caractères (`K7P-4MX`, sans 0/O, 1/I/L, 5/S). Il le tape une fois par appareil. Sa progression reste sur l'appareil et part aussi en ligne, dans une feuille Google du professeur (compte personnel), via un script Google Apps Script. Sur l'appareil comme en ligne, on additionne : une question validée quelque part reste validée partout, et personne ne peut effacer la progression d'un élève depuis le site.
+- **Écran du code** : à la première visite, « Entre ton code personnel » ou « Continuer sans code ». Le code s'affiche ensuite dans la barre du haut (« Me déconnecter », « Quitter » sur petit téléphone) ; la déconnexion efface la progression de l'appareil (ordinateurs du lycée). Hors ligne, les réponses attendent et partent au retour du réseau.
+- **Google lent** : le script Google répond parfois en 1 seconde, parfois en 30 (service gratuit). Le site n'attend jamais : au-delà de 8 secondes, l'élève entre « provisoirement », son code est vérifié en arrière-plan et sa progression en ligne s'ajoute dès que Google répond (si le code est faux, il est prévenu et garde ce qu'il a fait sur l'appareil). Les envois ratés sont relancés automatiquement.
+- **Modifier le script Google** : modifier `sources/outils/script-google.modele.gs` (en ASCII seulement : les accents sont abîmés par le copier-coller), régénérer `sources/eleves/script-google.gs` avec les codes, puis le professeur colle le script, remet son mot de passe, et fait « Déployer > Gérer les déploiements > crayon > Nouvelle version ». La feuille est en français : les listes sont forcées en texte (sinon « 0,2,3 » devient un nombre).
+- **Code de test du professeur** : `sources/eleves/code-professeur.txt` (ajouté dans l'onglet « Codes »). L'utiliser pour les tests, jamais le code d'un élève.
+- **Fichiers privés** (dans `sources/eleves/`, jamais publiés) : `eleves-codes.csv` (nom, prénom, code), `etiquettes-a-imprimer.html`, `script-google.gs` (le script à coller dans la feuille, avec les codes et sans noms), `INSTALLATION.md` (les étapes pour le professeur). Le modèle du script est `sources/outils/script-google.modele.gs`.
+- **Données en ligne** : onglet « Codes » (un code par ligne : pour ajouter un élève, ajouter son code), onglet « Progression » (une ligne par élève et par chapitre), un onglet « Jeu <id> » par jeu. Aucun nom.
+- **Suivi** : `prof.html`, mot de passe défini dans le script Google (`MOT_DE_PASSE`). Les noms viennent du fichier `eleves-codes.csv` ouvert dans la page : ils restent dans le navigateur du professeur.
+- **Sécurité** : plus de 30 codes ou mots de passe faux en 10 minutes bloquent le serveur 10 minutes.
+- **Jeux** : un jeu peut envoyer un résultat de partie avec `SGN_COMPTES.envoyerJeu("id-du-jeu", { temps: "18 min", enigmes: 6 })` (charger `../../data/config.js` puis `../../assets/comptes.js` dans la page du jeu). Le résultat arrive dans l'onglet « Jeux » du suivi. Ne pas toucher à l'envoi vers le Google Form du jeu « Premier jour » sans accord.
+- **Retirer les codes** : remettre `comptes: { adresse: "" }` dans `data/config.js` et publier (le site redevient comme avant, les élèves gardent leur progression sur leur appareil), puis supprimer la feuille Google.
+- **Données personnelles** : le professeur a choisi de lancer les codes avant l'accord du chef d'établissement ; si l'accord n'est pas donné, les retirer comme ci-dessus.
 
 ## Vérifier les chapitres
 
