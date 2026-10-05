@@ -50,7 +50,42 @@
     .p-page { padding-block: 24px 64px; }
     .p-erreur-maj { color: #F3A090; font-weight: 700; }
 
-    /* Connexion */
+    /* Connexion : panneau bleu nuit (comme l'affiche d'évaluation du site élève) et carte du mot de passe */
+    body.en-connexion .p-entete { display: none; }
+    body.en-connexion .p-page { padding-top: 20px; }
+    .p-login { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); min-height: min(560px, calc(100vh - 60px)); border-radius: 26px; overflow: hidden; box-shadow: var(--shadow); background: var(--card); }
+    .p-login-gauche { position: relative; overflow: hidden; color: #EEF3EF; padding: 30px; display: flex; flex-direction: column; justify-content: space-between; gap: 20px;
+      background: radial-gradient(120% 140% at 80% 10%, #2B3F6B 0%, #14213D 50%, #0B1428 100%); }
+    .p-login-gauche::after { content: ""; position: absolute; top: -30%; bottom: -30%; width: 70px; left: -120px; background: rgba(255, 255, 255, .08); transform: skewX(-20deg); animation: refletP 4s ease-in-out infinite; pointer-events: none; }
+    @keyframes refletP { 0% { left: -120px; } 55%, 100% { left: 115%; } }
+    .p-login-marque { display: flex; align-items: center; gap: 10px; font-family: var(--display); font-weight: 800; font-size: 1.3rem; }
+    .p-login-titre { margin: 0 0 10px; font-family: var(--display); font-weight: 800; font-size: clamp(2rem, 5vw, 2.8rem); line-height: 1.02; letter-spacing: -0.02em; }
+    .p-login-titre span { color: var(--sun); }
+    .p-login-sous { margin: 0; color: #AFC2BA; max-width: 300px; }
+    .p-login-puces { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 16px; }
+    .p-login-puces span { font-size: .8rem; font-weight: 700; background: rgba(255, 255, 255, .1); border: 1px solid rgba(255, 255, 255, .18); border-radius: 99px; padding: 4px 12px; }
+    .p-login-dessin { position: absolute; right: -14px; bottom: -6px; animation: flotteP 4s ease-in-out infinite; }
+    @keyframes flotteP { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+    .p-login-droite { display: flex; align-items: center; justify-content: center; padding: 28px 22px; background: var(--bg); }
+    .p-login-carte { width: 100%; max-width: 340px; background: var(--card); border-radius: 22px; box-shadow: var(--shadow); padding: 26px 24px; display: grid; gap: 12px; text-align: center; }
+    .p-login-carte h2 { font-size: 1.6rem; }
+    .p-login-carte p { margin: 0; }
+    .p-login-carte .btn { width: 100%; }
+    .p-login-carte input[type=password], .p-login-carte input[type=text] { min-height: 48px; padding: 8px 14px; border: 2px solid var(--line); border-radius: var(--r-sm); background: var(--bg); color: var(--ink); font-size: 1.05rem; }
+    .p-rester { display: flex; align-items: center; justify-content: center; gap: 8px; font-weight: 600; font-size: .92rem; cursor: pointer; }
+    .p-rester input { width: 18px; height: 18px; accent-color: #15231E; }
+    .p-login-note { font-size: .8rem; color: var(--ink-soft); }
+    .p-login-attente { font-weight: 700; color: var(--ink-soft); }
+    .p-maj .court { display: none; }
+    @media (max-width: 760px) {
+      .p-login { grid-template-columns: 1fr; min-height: 0; }
+      .p-login-gauche { min-height: 230px; padding: 22px 22px 26px; }
+      .p-login-dessin svg { width: 130px; height: 103px; }
+      .p-maj .long { display: none; }
+      .p-maj .court { display: inline; }
+    }
+    @media (prefers-reduced-motion: reduce) { .p-login-gauche::after, .p-login-dessin { animation: none; } }
+    /* Ancien formulaire (gardé pour compatibilité) */
     .suivi-form { display: grid; gap: 12px; max-width: 520px; margin: 10px auto 0; text-align: center; }
     .suivi-form h2 { font-size: 1.5rem; }
     .suivi-form p { margin: 0; }
@@ -198,7 +233,7 @@
     @media (max-width: 760px) {
       .p-cles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .p-cle b { font-size: 1.9rem; }
-      .p-maj span { display: none; }
+      #maj-texte { display: none; }
       .p-partie { padding: 10px 12px 12px; font-size: 1rem; }
       .p-ligne .jauge { display: none; }
       .p-code { margin-left: 0; text-align: left; }
@@ -219,7 +254,7 @@
     <div class="p-marque">
       <svg width="46" height="46" viewBox="0 0 110 110" aria-hidden="true"><rect width="110" height="110" rx="24" fill="#22352E"/><g fill="#FFF4E4"><rect x="20" y="64" width="14" height="24" rx="2"/><rect x="40" y="52" width="14" height="36" rx="2"/><rect x="60" y="38" width="14" height="50" rx="2"/></g><circle cx="72" cy="52" r="17" fill="#22352E" stroke="#F09080" stroke-width="6"/><line x1="84" y1="64" x2="96" y2="78" stroke="#F09080" stroke-width="7" stroke-linecap="round"/></svg>
       <div><h1>Suivi SGN</h1><p>Espace professeur · M. Lefebvre</p></div>
-      <div class="p-maj" id="maj" hidden><span id="maj-texte"></span><button class="btn-clair" type="button" id="actualiser">↻ Actualiser</button></div>
+      <div class="p-maj" id="maj" hidden><span id="maj-texte"></span><button class="btn-clair" type="button" id="actualiser"><span aria-hidden="true">↻</span><span class="long"> Actualiser</span></button><button class="btn-clair" type="button" id="deconnexion"><span class="long">Me déconnecter</span><span class="court">Quitter</span></button></div>
     </div>
     <nav class="p-parties" id="parties" hidden aria-label="Parties du suivi">
       <button class="p-partie" type="button" data-partie="classe" aria-pressed="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M17.5 14.6c2.3.4 3.6 2 4 4.9"/></svg>La classe</button>
@@ -378,43 +413,90 @@
         demander({ action: "suivi", motDePasse: mdp }, 3, function () { avancer("Google met un peu de temps, patientez…"); }).catch(function () { throw "google"; })
       ]).then(function (res) {
         var d = res[1];
-        if (!d.ok) { fin(d.erreur === "trop" ? "Trop d’essais : réessayez dans 10 minutes." : "Mot de passe incorrect."); return; }
+        if (!d.ok) { fin(d.erreur === "trop" ? "Trop d’essais : réessayez dans 10 minutes." : "Mot de passe incorrect.", d.erreur === "trop" ? "trop" : "mdp"); return; }
         motDePasse = mdp;
         feuille = d.eleves || null;
         try { preparer(res[0], d); fin(null); }
-        catch (e) { fin("La page de suivi n’a pas pu s’afficher. Rechargez la page et réessayez."); }
+        catch (e) { fin("La page de suivi n’a pas pu s’afficher. Rechargez la page et réessayez.", "page"); }
       }, function (cause) {
         fin(cause === "chapitres" ? "Les chapitres du site n’ont pas pu être chargés. Vérifiez la connexion internet, puis réessayez."
-          : "Google n’a pas répondu, même après 3 essais. Vérifiez la connexion internet, puis réessayez.");
+          : "Google n’a pas répondu, même après 3 essais. Vérifiez la connexion internet, puis réessayez.", "reseau");
       });
     }
+    /* « Rester connecté sur cet appareil » : le mot de passe est gardé dans ce navigateur (le téléphone du professeur).
+       Un élève qui trouverait l'adresse de la page ne voit toujours rien sans le mot de passe. « Me déconnecter » l'efface. */
+    var CLE_MDP = "sgn-prof-mdp";
+    function mdpGarde() { try { return localStorage.getItem(CLE_MDP) || ""; } catch (e) { return ""; } }
+    function garderMdp(m) { try { if (m) { localStorage.setItem(CLE_MDP, m); } else { localStorage.removeItem(CLE_MDP); } } catch (e) { /* stockage indisponible */ } }
+    function modeConnexion(oui) { document.body.classList.toggle("en-connexion", oui); }
+
+    var DESSIN_ACCUEIL = '<svg width="190" height="150" viewBox="0 0 190 150" aria-hidden="true"><g transform="rotate(6 95 80)"><rect x="40" y="10" width="110" height="140" rx="10" fill="#fff"/><rect x="54" y="26" width="52" height="7" rx="3" fill="#15231E"/><g fill="#D6DED9"><rect x="72" y="50" width="64" height="6" rx="3"/><rect x="72" y="72" width="56" height="6" rx="3"/><rect x="72" y="94" width="64" height="6" rx="3"/></g><g fill="none" stroke="#1F7A5A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M54 52l5 5 8-10"/><path d="M54 74l5 5 8-10"/><path d="M54 96l5 5 8-10"/></g></g><circle cx="132" cy="96" r="26" fill="none" stroke="#F09080" stroke-width="8"/><line x1="151" y1="115" x2="172" y2="138" stroke="#F09080" stroke-width="10" stroke-linecap="round"/></svg>';
+    var LOGO = '<svg width="38" height="38" viewBox="0 0 110 110" aria-hidden="true"><rect width="110" height="110" rx="24" fill="#22352E"/><g fill="#FFF4E4"><rect x="20" y="64" width="14" height="24" rx="2"/><rect x="40" y="52" width="14" height="36" rx="2"/><rect x="60" y="38" width="14" height="50" rx="2"/></g><circle cx="72" cy="52" r="17" fill="#22352E" stroke="#F09080" stroke-width="6"/><line x1="84" y1="64" x2="96" y2="78" stroke="#F09080" stroke-width="7" stroke-linecap="round"/></svg>';
+    function panneauAccueil() {
+      return el("div", { class: "p-login-gauche" },
+        el("div", { class: "p-login-marque", html: LOGO + "<span>Suivi SGN</span>" }),
+        el("div", null, el("p", { class: "p-login-titre", html: "Bonjour<br>M. <span>Lefebvre</span>" }),
+          el("p", { class: "p-login-sous", text: "Toute ta classe d’un coup d’œil : la progression, les jeux, et bientôt les évaluations." }),
+          el("div", { class: "p-login-puces" }, ["Progression", "Jeux", "Évaluations"].map(function (t) { return el("span", { text: t }); }))),
+        el("span", { class: "p-login-dessin", html: DESSIN_ACCUEIL }));
+    }
     function ecranConnexion(message) {
+      modeConnexion(true);
       vider(zone);
       if (!ADRESSE) { zone.appendChild(el("div", { class: "card" }, el("p", { text: "Les codes élèves ne sont pas encore branchés : l’adresse du script Google est vide dans data/config.js (comptes.adresse)." }))); return; }
       var mdp = el("input", { type: "password", autocomplete: "current-password", autocapitalize: "off", autocorrect: "off", spellcheck: "false",
         placeholder: "Mot de passe du suivi", "aria-label": "Mot de passe du suivi" });
       var oeil = el("button", { class: "oeil", type: "button", "aria-pressed": "false", text: "Afficher",
         onclick: function () { var voir = mdp.type === "password"; mdp.type = voir ? "text" : "password"; oeil.textContent = voir ? "Masquer" : "Afficher"; oeil.setAttribute("aria-pressed", String(voir)); mdp.focus(); } });
+      var rester = el("input", { type: "checkbox", id: "rester", checked: true });
       var erreur = el("p", { class: "code-erreur", role: "alert", text: message || "" });
-      var bouton = el("button", { class: "btn btn-dark", type: "submit", text: "Ouvrir le suivi" });
-      zone.appendChild(el("form", { class: "card suivi-form", onsubmit: function (ev) {
+      var bouton = el("button", { class: "btn btn-dark", type: "submit", text: "Ouvrir le suivi →" });
+      var form = el("form", { class: "p-login-carte", onsubmit: function (ev) {
         ev.preventDefault();
         erreur.textContent = ""; bouton.disabled = true; bouton.textContent = "Chargement…";
         var lent = setTimeout(function () { bouton.textContent = "Google met un peu de temps, patientez…"; }, 8000);
         /* Espaces ajoutés par le clavier du téléphone : retirés. */
-        charger(mdp.value.trim(), function (t) { bouton.textContent = t; }, function (msg) {
+        var tape = mdp.value.trim();
+        charger(tape, function (t) { bouton.textContent = t; }, function (msg) {
           clearTimeout(lent);
-          if (msg) { bouton.disabled = false; bouton.textContent = "Ouvrir le suivi"; erreur.textContent = msg; }
+          if (msg) { bouton.disabled = false; bouton.textContent = "Ouvrir le suivi →"; erreur.textContent = msg; return; }
+          garderMdp(rester.checked ? tape : "");
         });
-      } }, el("h2", { text: "Bonjour !" }), el("p", { class: "soft", text: "Entrez le mot de passe de votre suivi pour voir la progression de vos élèves." }),
-        el("label", { text: "Mot de passe" }), el("div", { class: "mdp-ligne" }, mdp, oeil), bouton, erreur));
+      } }, el("h2", { text: "Bon retour !" }), el("p", { class: "soft", text: "Ton mot de passe, une seule fois sur cet appareil." }),
+        el("label", { class: "sr-only", for: "mdp-prof", text: "Mot de passe" }), el("div", { class: "mdp-ligne" }, mdp, oeil),
+        el("label", { class: "p-rester", for: "rester" }, rester, " Rester connecté sur cet appareil"),
+        bouton, erreur, el("p", { class: "p-login-note", text: "Sans ce mot de passe, personne ne voit rien." }));
+      mdp.id = "mdp-prof";
+      zone.appendChild(el("div", { class: "p-login" }, panneauAccueil(), el("div", { class: "p-login-droite" }, form)));
+    }
+    /* À l'ouverture : si le mot de passe est gardé sur cet appareil, on ouvre directement le suivi. */
+    function demarrer() {
+      var m = mdpGarde();
+      if (!m || !ADRESSE) { ecranConnexion(); return; }
+      modeConnexion(true);
+      vider(zone);
+      var info = el("p", { class: "p-login-attente", role: "status", text: "Ouverture du suivi…" });
+      zone.appendChild(el("div", { class: "p-login" }, panneauAccueil(), el("div", { class: "p-login-droite" }, el("div", { class: "p-login-carte" }, el("h2", { text: "Bon retour !" }), info))));
+      charger(m, function (t) { info.textContent = t; }, function (msg, raison) {
+        if (!msg) { return; }
+        if (raison === "mdp") { garderMdp(""); ecranConnexion("Le mot de passe a changé : entre le nouveau, une seule fois."); }
+        else { ecranConnexion(msg); }
+      });
     }
     var btnActualiser = document.getElementById("actualiser"), majTexte = document.getElementById("maj-texte");
+    document.getElementById("deconnexion").addEventListener("click", function () {
+      garderMdp(""); motDePasse = "";
+      document.getElementById("parties").hidden = true;
+      document.getElementById("maj").hidden = true;
+      ecranConnexion("Tu es déconnecté sur cet appareil.");
+      window.scrollTo(0, 0);
+    });
     btnActualiser.addEventListener("click", function () {
       if (!motDePasse) { ecranConnexion(); return; }
-      btnActualiser.disabled = true; btnActualiser.textContent = "Chargement…";
+      var libelle = btnActualiser.innerHTML;
+      btnActualiser.disabled = true; btnActualiser.textContent = "…";
       charger(motDePasse, function (t) { majTexte.textContent = t; }, function (msg) {
-        btnActualiser.disabled = false; btnActualiser.textContent = "↻ Actualiser";
+        btnActualiser.disabled = false; btnActualiser.innerHTML = libelle;
         if (msg) { majTexte.textContent = msg; majTexte.className = "p-erreur-maj"; }
       });
     });
@@ -446,6 +528,7 @@
       classe = eleves.filter(function (e) { return !e.autre; });
       autres = eleves.filter(function (e) { return e.autre; });
       if (!etatPage.code || !eleves.some(function (e) { return e.code === etatPage.code; })) { etatPage.code = (classe[0] || eleves[0] || {}).code || null; }
+      modeConnexion(false);
       document.getElementById("parties").hidden = false;
       document.getElementById("maj").hidden = false;
       majTexte.className = "";
@@ -758,7 +841,7 @@
       });
     }
 
-    ecranConnexion();
+    demarrer();
   })();
   </script>
 </body>
