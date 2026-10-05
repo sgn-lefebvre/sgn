@@ -161,6 +161,21 @@
     .p-code small { display: block; color: var(--entete-soft); font-size: .8rem; margin-top: 4px; }
     .p-fiche { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 18px 20px; margin-bottom: 16px; }
     .p-fiche { overflow: hidden; }
+    .p-fiche:not(.is-ouverte) { padding-bottom: 0; }
+    button.p-fiche-tete { width: calc(100% + 40px); border: 0; border-top: 8px solid var(--cc, var(--line)); font: inherit; color: inherit; text-align: left; cursor: pointer; }
+    .p-fiche:not(.is-ouverte) .p-fiche-tete { margin-bottom: 0; }
+    button.p-fiche-tete:hover { filter: brightness(.97); }
+    .p-fiche-txt { flex: 1; min-width: 0; }
+    .p-fiche-titre { display: block; font-weight: 700; font-size: 1.05rem; line-height: 1.25; }
+    .p-fiche-resume { display: block; margin-top: 2px; color: var(--ink-soft); font-size: .85rem; }
+    .p-chevron { flex: none; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: var(--card); font-size: 1rem; transition: transform .2s ease; }
+    .p-fiche.is-ouverte .p-chevron { transform: rotate(180deg); }
+    .p-fiche .cadenas { flex: none; width: 58px; text-align: center; font-size: 1.6rem; }
+    .p-replier { display: flex; justify-content: flex-end; margin-top: 10px; }
+    .p-replier-btn { display: inline-flex; align-items: center; gap: 8px; border: 2px solid var(--line); background: var(--card); color: var(--ink); border-radius: 999px; padding: 6px 14px 6px 8px; font: inherit; font-weight: 700; font-size: .9rem; cursor: pointer; }
+    .p-replier-btn span { width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; background: var(--ccs, var(--doux)); }
+    .p-replier-btn:hover { border-color: var(--cc, var(--ink)); }
+    .p-deplier { display: flex; gap: 18px; justify-content: flex-end; margin: -6px 0 10px; }
     .p-fiche-tete { display: flex; align-items: center; gap: 14px; margin: -18px -20px 10px; padding: 14px 20px; background: var(--ccs, var(--doux)); border-top: 8px solid var(--cc, var(--line)); }
     .p-fiche-tete h3 { font-family: var(--text); font-size: 1.05rem; line-height: 1.25; letter-spacing: 0; font-weight: 700; }
     .p-fiche-tete p { margin: 2px 0 0; color: var(--ink-soft); font-size: .85rem; }
@@ -690,18 +705,48 @@
             return el("div", { class: "p-th" }, el("strong", { text: quand(x.date) }), el("div", { class: "soft", style: "font-size:.88rem;margin-top:2px", text: cols.map(function (k) { return p.ent[k] + " : " + x.l[k]; }).join(" · ") }));
           })) : null);
       }
+      /* Chaque chapitre se replie et se déplie en touchant sa bande de couleur. Les chapitres dépliés restent dépliés
+         quand on passe d'un élève à l'autre (Précédent / Suivant), pour comparer facilement. */
+      var ouverts = etatPage.ouverts || (etatPage.ouverts = {});
+      function fiche(ch, icone, resume, contenu) {
+        var id = ch.c.id, corps = el("div", { class: "p-fiche-corps", hidden: !ouverts[id] });
+        contenu.forEach(function (n) { if (n) { corps.appendChild(n); } });
+        var section = el("section", { class: "p-fiche" + (ouverts[id] ? " is-ouverte" : ""), style: teinte(ch) });
+        function basculer() {
+          ouverts[id] = !ouverts[id];
+          corps.hidden = !ouverts[id];
+          section.classList.toggle("is-ouverte", ouverts[id]);
+          tete.setAttribute("aria-expanded", String(ouverts[id]));
+        }
+        var tete = el("button", { class: "p-fiche-tete", type: "button", "aria-expanded": String(!!ouverts[id]), onclick: basculer }, icone,
+          el("span", { class: "p-fiche-txt" }, el("span", { class: "p-fiche-titre", text: "Chapitre " + id + " · " + ch.c.titre }), el("span", { class: "p-fiche-resume", text: resume })),
+          el("span", { class: "p-chevron", "aria-hidden": "true", text: "▾" }));
+        /* En bas du chapitre déplié : « Replier » sans remonter ; la page se recale ensuite sur le chapitre. */
+        corps.appendChild(el("div", { class: "p-replier" }, el("button", { class: "p-replier-btn", type: "button", "aria-label": "Replier le chapitre " + id,
+          onclick: function () { basculer(); if (section.getBoundingClientRect().top < 0) { section.scrollIntoView({ block: "start" }); } } },
+          el("span", { "aria-hidden": "true", text: "▴" }), "Replier")));
+        section.appendChild(tete); section.appendChild(corps);
+        return section;
+      }
+      function resumeJeux(lesJeux) {
+        return lesJeux.map(function (j) {
+          var n = parties(j.id).lignes.filter(function (x) { return x.code === e.code; }).length;
+          return j.titre + " : " + (n ? pluriel(n, "partie", "parties") : "pas encore joué");
+        }).join(" · ");
+      }
+      zone.appendChild(el("div", { class: "p-deplier" },
+        el("button", { class: "link-btn", type: "button", text: "Tout déplier", onclick: function () { tous.forEach(function (ch) { ouverts[ch.c.id] = true; }); rendre(); } }),
+        el("button", { class: "link-btn", type: "button", text: "Tout replier", onclick: function () { ouverts = etatPage.ouverts = {}; rendre(); } })));
       tous.forEach(function (ch) {
         var k = chapitres.indexOf(ch), lesJeux = ch.c.jeux || [];
         if (!ch.ouvert) {
-          zone.appendChild(el("section", { class: "p-fiche", style: teinte(ch) },
-            el("div", { class: "p-fiche-tete" }, el("span", { class: "cadenas", "aria-hidden": "true", style: "font-size:1.6rem", text: "🔒" }),
-              el("div", null, el("h3", { text: "Chapitre " + ch.c.id + " · " + ch.c.titre }), el("p", { text: "En cours en classe : l’entraînement n’est pas encore ouvert." }))),
-            lesJeux.map(sesParties)));
+          zone.appendChild(fiche(ch, el("span", { class: "cadenas", "aria-hidden": "true", text: "🔒" }),
+            "En cours en classe" + (lesJeux.length ? " · " + resumeJeux(lesJeux) : ""), lesJeux.map(sesParties)));
           return;
         }
         var r = e.res[k], avecThemes = ch.themes.length > 0;
-        zone.appendChild(el("section", { class: "p-fiche", style: teinte(ch) },
-          el("div", { class: "p-fiche-tete" }, anneau(r.pct, 58), el("div", null, el("h3", { text: "Chapitre " + ch.c.id + " · " + ch.c.titre }), el("p", { text: "La jauge du chapitre, comme sur son écran" }))),
+        zone.appendChild(fiche(ch, anneau(r.pct, 58),
+          "Flashcards " + r.cartes[0] + "/" + r.cartes[1] + " · QCM " + r.qcm[0] + "/" + r.qcm[1] + " · Situations " + r.cas[0] + "/" + r.cas[1] + (lesJeux.length ? " · " + resumeJeux(lesJeux) : ""), [
           el("div", { class: "p-act", style: "border-top:0" }, ligne("Flashcards", r.cartes, "sues")),
           el("div", { class: "p-act" }, ligne("QCM", r.qcm, "validées"), avecThemes ? el("div", { class: "p-themes" }, r.themes.map(function (t) {
             return el("div", { class: "p-th" }, ligne(t.nom, t.qcm),
@@ -709,8 +754,7 @@
           })) : null),
           el("div", { class: "p-act" }, ligne("Situations", r.cas, "validées"), avecThemes ? el("div", { class: "p-themes" }, r.themes.map(function (t) {
             return el("div", { class: "p-th" }, ligne(t.nom, t.cas, "mini-cas"));
-          })) : null),
-          lesJeux.map(sesParties)));
+          })) : null)].concat(lesJeux.map(sesParties))));
       });
     }
 

@@ -576,20 +576,24 @@ tbody th { font-weight: 700; }
 .flow li span { border-color: var(--cc, var(--line)); }
 .flow li + li::before { color: var(--cc, var(--ink)); }
 .syn li::marker { color: var(--cc, var(--ink)); }
-/* Lexique : les fiches prennent tour à tour les 10 couleurs de la palette (choix du professeur) */
-.vocab div:nth-child(10n+1) { border-left-color: var(--ch1); }
-.vocab div:nth-child(10n+2) { border-left-color: var(--ch2); }
-.vocab div:nth-child(10n+3) { border-left-color: var(--ch3); }
-.vocab div:nth-child(10n+4) { border-left-color: var(--ch4); }
-.vocab div:nth-child(10n+5) { border-left-color: var(--ch5); }
-.vocab div:nth-child(10n+6) { border-left-color: var(--ch6); }
-.vocab div:nth-child(10n+7) { border-left-color: var(--ch7); }
-.vocab div:nth-child(10n+8) { border-left-color: var(--ch8); }
-.vocab div:nth-child(10n+9) { border-left-color: var(--ch9); }
-.vocab div:nth-child(10n+0) { border-left-color: var(--ch10); }
+/* Lexique : les fiches prennent tour à tour les 10 couleurs de la palette (choix du professeur) ; les puces de la fiche prennent sa couleur */
+.vocab div:nth-child(10n+1) { --carte: var(--ch1); border-left-color: var(--carte); }
+.vocab div:nth-child(10n+2) { --carte: var(--ch2); border-left-color: var(--carte); }
+.vocab div:nth-child(10n+3) { --carte: var(--ch3); border-left-color: var(--carte); }
+.vocab div:nth-child(10n+4) { --carte: var(--ch4); border-left-color: var(--carte); }
+.vocab div:nth-child(10n+5) { --carte: var(--ch5); border-left-color: var(--carte); }
+.vocab div:nth-child(10n+6) { --carte: var(--ch6); border-left-color: var(--carte); }
+.vocab div:nth-child(10n+7) { --carte: var(--ch7); border-left-color: var(--carte); }
+.vocab div:nth-child(10n+8) { --carte: var(--ch8); border-left-color: var(--carte); }
+.vocab div:nth-child(10n+9) { --carte: var(--ch9); border-left-color: var(--carte); }
+.vocab div:nth-child(10n+0) { --carte: var(--ch10); border-left-color: var(--carte); }
 .review li { border-left-color: var(--cc, var(--coral)); }
 .choice.is-on { background: var(--ccs, var(--sun-soft)); }
 .pill-niveau.n1 { background: var(--ccs, var(--teal-soft)); border: 1.5px solid var(--cc, var(--teal)); }
 .pill-niveau.n2 { background: var(--cc, var(--coral)); border: 1.5px solid var(--cc, var(--coral)); color: #15231E; }
 #app .serie-badge { background: var(--cc, var(--sun)); }
 #app .medaille { background: var(--ccs, var(--sun-soft)); }
+
+/* Puces des sous-éléments : la couleur de leur fiche (lexique) ou de leur carte (flashcards) */
+.vocab .sous li::marker { color: var(--carte, var(--cc, var(--ink))); }
+.flash-sous span::before { color: var(--accent); }
