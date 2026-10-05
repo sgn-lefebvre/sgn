@@ -45,7 +45,6 @@
 </head>
 <body>
   <main class="wrap suivi">
-    <p><a href="index.html">← Revenir au site</a></p>
     <h1 class="title">Suivi des élèves</h1>
     <p class="lead soft">Page réservée au professeur. Elle n’a de lien nulle part sur le site.</p>
     <div id="zone"></div>
@@ -58,7 +57,7 @@
     "use strict";
     var CFG = window.SGN.config, ADRESSE = (CFG.comptes || {}).adresse || "";
     var zone = document.getElementById("zone");
-    var CLE_NOMS = "sgn-prof-noms";
+    var CLE_NOMS = "sgn-prof-noms", CLE_AUTRES = "sgn-prof-autres";
 
     function el(tag, props) {
       var n = document.createElement(tag), kids = Array.prototype.slice.call(arguments, 2);
@@ -72,6 +71,8 @@
     }
     function vider(n) { while (n.firstChild) { n.removeChild(n.firstChild); } return n; }
     function lireNoms() { try { return JSON.parse(localStorage.getItem(CLE_NOMS)) || {}; } catch (e) { return {}; } }
+    /* Codes qui ne sont pas des élèves de la classe (colonne « Groupe » = Autre) : tests, amis… */
+    function lireAutres() { try { return JSON.parse(localStorage.getItem(CLE_AUTRES)) || []; } catch (e) { return []; } }
     function pct(a, b) { return b ? Math.floor(a / b * 100) : 0; }
     function badge(p) { return el("span", { class: "pct p" + (p >= 100 ? 3 : p >= 60 ? 2 : p >= 25 ? 1 : 0), text: p + " %" }); }
     function quand(iso) {
@@ -145,19 +146,21 @@
       var fichier = el("input", { type: "file", accept: ".csv,text/csv", onchange: function () {
         var f = fichier.files[0]; if (!f) { return; }
         f.text().then(function (t) {
-          var res = {};
+          var res = {}, autres = [];
           t.split(/\r?\n/).slice(1).forEach(function (ligne) {
             var p = ligne.split(";"); if (p.length < 3) { return; }
-            var code = p[2].trim().toUpperCase(); if (code) { res[code] = (p[0].trim() + " " + p[1].trim()).trim(); }
+            var code = p[2].trim().toUpperCase(); if (!code) { return; }
+            res[code] = (p[0].trim() + " " + p[1].trim()).trim();
+            if (p[3] && p[3].trim().toLowerCase() === "autre") { autres.push(code); }
           });
-          try { localStorage.setItem(CLE_NOMS, JSON.stringify(res)); } catch (e) { /* stockage indisponible */ }
+          try { localStorage.setItem(CLE_NOMS, JSON.stringify(res)); localStorage.setItem(CLE_AUTRES, JSON.stringify(autres)); } catch (e) { /* stockage indisponible */ }
           rafraichir();
         });
       } });
       return el("div", { class: "card info-noms" },
         el("p", { text: nb ? nb + " noms chargés depuis votre fichier (gardés dans ce navigateur, jamais envoyés en ligne)." : "Pour voir les noms à la place des codes, ouvrez votre fichier eleves-codes.csv (dossier sources/eleves de votre ordinateur). Il n’est jamais envoyé en ligne." }),
         el("label", null, nb ? "Remplacer le fichier : " : "Fichier des noms : ", fichier),
-        nb ? el("p", null, el("button", { class: "link-btn", type: "button", text: "Oublier les noms sur cet ordinateur", onclick: function () { try { localStorage.removeItem(CLE_NOMS); } catch (e) {} rafraichir(); } })) : null);
+        nb ? el("p", null, el("button", { class: "link-btn", type: "button", text: "Oublier les noms sur cet ordinateur", onclick: function () { try { localStorage.removeItem(CLE_NOMS); localStorage.removeItem(CLE_AUTRES); } catch (e) {} rafraichir(); } })) : null);
     }
 
     /* ---------- Suivi ---------- */
@@ -181,6 +184,9 @@
           if (tri === "total") { return b.pct - a.pct; }
           return (b.res[tri] ? b.res[tri].pct : 0) - (a.res[tri] ? a.res[tri].pct : 0);
         });
+        var listeAutres = lireAutres();
+        var autres = eleves.filter(function (e) { return listeAutres.indexOf(e.code) >= 0; });
+        eleves = eleves.filter(function (e) { return listeAutres.indexOf(e.code) < 0; });
         var actifs = eleves.filter(function (e) { return e.maj; }).length;
         var a100 = eleves.filter(function (e) { return e.pct >= 100; }).length;
         zone.appendChild(el("p", { class: "lead", text: eleves.length + " élèves · " + actifs + (actifs > 1 ? " ont déjà utilisé leur code · " : " a déjà utilisé son code · ") + a100 + " à 100 %" }));
@@ -193,9 +199,10 @@
         if (onglet === "noms") { zone.appendChild(blocNoms(rendre)); return; }
 
         if (onglet === "classe") {
-          var corps = el("tbody");
           function th(cle, texte) { return el("th", { onclick: function () { tri = cle; rendre(); }, title: "Trier" }, texte + (tri === cle ? " ▾" : "")); }
-          eleves.forEach(function (e) {
+          function tableau(liste) {
+          var corps = el("tbody");
+          liste.forEach(function (e) {
             var detail = el("tr", { class: "detail", hidden: true }, el("td", { colspan: String(chapitres.length + 3) }, chapitres.map(function (ch, i) {
               var r = e.res[i];
               return el("div", { class: "det-ch" },
@@ -210,9 +217,15 @@
               el("td", { class: e.maj ? "" : "muet", text: quand(e.maj) })));
             corps.appendChild(detail);
           });
+          return el("div", { class: "table-scroll" }, el("table", { class: "tab-classe" },
+            el("thead", null, el("tr", null, th("nom", "Élève"), chapitres.map(function (ch, i) { return th(i, "Chap. " + ch.c.id); }), th("total", "Total"), th("maj", "Dernière activité"))), corps));
+          }
           zone.appendChild(el("p", { class: "soft", text: "Cliquez sur un élève pour voir le détail par thème. Cliquez sur un titre de colonne pour trier." }));
-          zone.appendChild(el("div", { class: "table-scroll" }, el("table", { class: "tab-classe" },
-            el("thead", null, el("tr", null, th("nom", "Élève"), chapitres.map(function (ch, i) { return th(i, "Chap. " + ch.c.id); }), th("total", "Total"), th("maj", "Dernière activité"))), corps)));
+          zone.appendChild(tableau(eleves));
+          if (autres.length) {
+            zone.appendChild(el("h2", { class: "syn-h3", text: "Autres comptes (tests, invités) — non comptés dans la classe" }));
+            zone.appendChild(tableau(autres));
+          }
           zone.appendChild(el("p", null, el("button", { class: "btn", type: "button", text: "Télécharger le tableau (CSV)", onclick: function () {
             var lignes = [["Élève", "Code"].concat(chapitres.map(function (ch) { return "Chapitre " + ch.c.id + " (%)"; }), ["Total (%)", "Dernière activité"])];
             eleves.forEach(function (e) { lignes.push([e.nom, e.code].concat(e.res.map(function (r) { return r.pct; }), [e.pct, e.maj || ""])); });
@@ -245,7 +258,10 @@
           if (!ids.length) { zone.appendChild(el("p", { class: "soft", text: "Aucun résultat de jeu pour l’instant. Les jeux branchés sur les codes enverront leurs parties ici." })); return; }
           ids.forEach(function (id) {
             var v = d.jeux[id], ent = v[0] || [];
-            zone.appendChild(el("h2", { class: "syn-h3", text: "Jeu : " + id + " (" + (v.length - 1) + " partie(s))" }));
+            /* Titre du jeu : celui de la liste « jeux » du chapitre (même identifiant), sinon l'identifiant. */
+            var titre = id;
+            (window.SGN.chapitres || []).forEach(function (c) { (c.jeux || []).forEach(function (j) { if (j.id === id) { titre = j.titre + " (chapitre " + c.id + ")"; } }); });
+            zone.appendChild(el("h2", { class: "syn-h3", text: "Jeu : " + titre + " · " + (v.length - 1) + " partie" + (v.length - 1 > 1 ? "s" : "") }));
             zone.appendChild(el("div", { class: "table-scroll" }, el("table", { class: "tab-classe" },
               el("thead", null, el("tr", null, ent.map(function (h) { return el("th", { text: h === "Code" ? "Élève" : h }); }))),
               el("tbody", null, v.slice(1).map(function (l) { return el("tr", null, l.map(function (x, k) {

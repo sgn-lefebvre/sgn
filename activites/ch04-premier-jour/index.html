@@ -149,6 +149,9 @@ body{background:#000;display:flex;justify-content:center}
   <div id="noteov"><div class="notecard"><div class="pin">📌 NOTE ÉPINGLÉE</div><h3 id="ntit"></h3><p id="ntxt"></p><button onclick="fermeNote()">Garder cette note</button></div></div>
 </div>
 
+<!-- Codes élèves : les résultats partent aussi vers la page de suivi du professeur (si l'élève est connecté). -->
+<script src="../../data/config.js"></script>
+<script src="../../assets/comptes.js"></script>
 <script>
 /* =================== état =================== */
 let P='', rep=50, err={1:0,2:0,3:0,4:0,5:0,6:0}, t0=0, flags={}, notes=[];
@@ -462,6 +465,14 @@ function finDuJeu(){
   d.append('entry.184483502',err[6]+' erreur(s)');
   fetch('https://docs.google.com/forms/d/e/1FAIpQLSffjtA3cseILytwp6N1LsOWGOp4sNJl83RVGLoDUlBXtOpc5Q/formResponse',{method:'POST',mode:'no-cors',body:d})
    .finally(()=>{$('envoi').textContent='✔ Résultats envoyés au professeur';});
+  /* En plus du Google Form ci-dessus (inchangé) : la partie arrive dans l'onglet « Jeux » de la page de suivi,
+     au nom de l'élève, s'il est connecté avec son code sur le site. */
+  try{
+    if(window.SGN_COMPTES&&SGN_COMPTES.code()){
+      SGN_COMPTES.envoyerJeu('ch04-premier-jour',{'Prénom dans le jeu':P,'Temps':temps,'Réputation':rep+'/100','Erreurs (total)':totErr,
+        'Étape 1':err[1],'Étape 2':err[2],'Étape 3':err[3],'Étape 4':err[4],'Étape 5':err[5],'Bilan final':err[6]});
+    }
+  }catch(e){}
 }
 function confettis(){
   const cv=$('confet'),c=cv.getContext('2d');

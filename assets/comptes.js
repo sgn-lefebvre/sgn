@@ -10,6 +10,7 @@
   var CFG = (window.SGN && window.SGN.config && window.SGN.config.comptes) || {};
   var ADRESSE = CFG.adresse || "";
   var CLE_CODE = "sgn-compte-code", CLE_CHOIX = "sgn-compte-choix", CLE_ATTENTE = "sgn-compte-a-envoyer", CLE_VERIF = "sgn-compte-a-verifier";
+  var CLE_JEUX = "sgn-compte-jeux-a-envoyer";
 
   function lire(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function ecrire(k, v) { try { if (v === null || v === undefined) { localStorage.removeItem(k); } else { localStorage.setItem(k, v); } } catch (e) { /* stockage indisponible */ } }
@@ -45,7 +46,7 @@
 
   /* Envoi de la progression : regroupé (une seconde après la dernière réponse), et réessayé plus tard
      si le réseau manque. Le dernier état à envoyer est gardé sur l'appareil. */
-  var minuteur = null, enCours = false;
+  var minuteur = null, enCours = null;
   function planifierEnvoi(chapitres) {
     if (!API.code()) { return; }
     ecrire(CLE_ATTENTE, JSON.stringify(chapitres));
@@ -54,18 +55,53 @@
   }
   function envoyerAttente() {
     var code = API.code(), attente = lire(CLE_ATTENTE);
-    if (!code || !attente || enCours) { return Promise.resolve(); }
-    enCours = true;
-    return appel({ action: "sauver", code: code, chapitres: JSON.parse(attente) })
+    if (enCours) { return enCours; }
+    if (!code || !attente) { return Promise.resolve(); }
+    enCours = appel({ action: "sauver", code: code, chapitres: JSON.parse(attente) })
       .then(function (r) { if (r && r.ok && lire(CLE_ATTENTE) === attente) { ecrire(CLE_ATTENTE, null); } })
       .catch(function () { /* hors ligne ou Google lent : on réessaiera */ })
       .then(function () {
-        enCours = false;
+        enCours = null;
         /* Il reste quelque chose à envoyer (échec, ou nouvelles réponses pendant l'envoi) : nouvel essai bientôt. */
         if (lire(CLE_ATTENTE)) { clearTimeout(minuteur); minuteur = setTimeout(envoyerAttente, 20000); }
       });
+    return enCours;
   }
   window.addEventListener("online", envoyerAttente);
+
+  /* Résultats de jeux : chaque partie attend sur l'appareil jusqu'à ce que Google l'ait bien reçue
+     (réseau absent, Google en panne, élève qui ferme le jeu trop vite). Chaque partie garde le code
+     de l'élève qui l'a jouée, même s'il se déconnecte ensuite. */
+  var minuteurJeux = null, jeuxEnCours = null;
+  function jeuxEnAttente() {
+    try { var l = JSON.parse(lire(CLE_JEUX) || "[]"); return Array.isArray(l) ? l : []; } catch (e) { return []; }
+  }
+  function envoyerJeux() {
+    if (jeuxEnCours) { return jeuxEnCours; }
+    var liste = jeuxEnAttente();
+    if (!ADRESSE || !liste.length) { return Promise.resolve(); }
+    var partie = liste[0];
+    jeuxEnCours = appel({ action: "jeu", code: partie.code, jeu: partie.jeu, donnees: partie.donnees })
+      .then(function (r) {
+        /* Reçue (ou refusée pour de bon : code inconnu) : on la retire de la file. */
+        if (r && (r.ok || r.erreur === "code")) {
+          ecrire(CLE_JEUX, JSON.stringify(jeuxEnAttente().filter(function (p) { return p.id !== partie.id; })));
+          return true;
+        }
+        return false;
+      }, function () { return false; })
+      .then(function (suite) {
+        jeuxEnCours = null;
+        if (suite && jeuxEnAttente().length) { return envoyerJeux(); }
+        if (jeuxEnAttente().length) { clearTimeout(minuteurJeux); minuteurJeux = setTimeout(envoyerJeux, 20000); }
+      });
+    return jeuxEnCours;
+  }
+  window.addEventListener("online", envoyerJeux);
+
+  function effacerCompte() {
+    ecrire(CLE_CODE, null); ecrire(CLE_CHOIX, null); ecrire(CLE_ATTENTE, null); ecrire(CLE_VERIF, null);
+  }
 
   var API = {
     actif: !!ADRESSE,
@@ -106,22 +142,35 @@
       }).catch(function () { return null; });
     },
     aVerifier: function () { return !!lire(CLE_VERIF); },
-    deconnecter: function () {
+    /* Déconnexion : on envoie d'abord les dernières réponses. Renvoie une promesse : true si l'élève est déconnecté,
+       false si des réponses n'ont pas pu partir (il reste alors connecté ; « force » le déconnecte quand même).
+       Les parties de jeux en attente restent sur l'appareil et partiront plus tard, avec leur code. */
+    deconnecter: function (force) {
       clearTimeout(minuteur);
-      var fin = envoyerAttente();
-      ecrire(CLE_CODE, null); ecrire(CLE_CHOIX, null); ecrire(CLE_ATTENTE, null); ecrire(CLE_VERIF, null);
-      return fin;
+      if (force) { effacerCompte(); return Promise.resolve(true); }
+      envoyerJeux();
+      return envoyerAttente().then(function () { return envoyerAttente(); }).then(function () {
+        if (lire(CLE_ATTENTE)) { return false; }
+        effacerCompte();
+        return true;
+      });
     },
     planifierEnvoi: planifierEnvoi,
     envoyerMaintenant: envoyerAttente,
-    /* Pour les jeux : un résultat de partie, rangé dans l'onglet « Jeu <id> » de la feuille du professeur. */
+    /* Pour les jeux : un résultat de partie, rangé dans l'onglet « Jeu <id> » de la feuille du professeur.
+       La partie attend sur l'appareil jusqu'à ce qu'elle soit reçue. */
     envoyerJeu: function (jeu, donnees) {
       var code = API.code();
       if (!code) { return Promise.resolve({ ok: false, erreur: "pas-connecte" }); }
-      return appel({ action: "jeu", code: code, jeu: jeu, donnees: donnees }).catch(function () { return { ok: false, erreur: "reseau" }; });
-    }
+      var liste = jeuxEnAttente();
+      liste.push({ id: Date.now() + "-" + Math.random().toString(36).slice(2, 8), code: code, jeu: jeu, donnees: donnees });
+      ecrire(CLE_JEUX, JSON.stringify(liste.slice(-50)));
+      return envoyerJeux().then(function () { return { ok: true, enAttente: jeuxEnAttente().length }; });
+    },
+    aEnvoyer: function () { return !!lire(CLE_ATTENTE); }
   };
 
   window.SGN_COMPTES = API;
   if (API.code()) { setTimeout(envoyerAttente, 2000); }
+  if (jeuxEnAttente().length) { setTimeout(envoyerJeux, 2500); }
 })();

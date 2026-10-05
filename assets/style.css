@@ -272,6 +272,13 @@ tbody th { font-weight: 700; }
 .compte { margin-left: auto; }
 .compte:empty { display: none; }
 .compte-btn { display: inline-flex; flex-direction: column; align-items: flex-end; gap: 1px; padding: 6px 12px; border: 2px solid var(--line); border-radius: var(--r-sm); background: var(--card); color: var(--ink); font-weight: 700; font-size: .9rem; line-height: 1.1; text-decoration: none; white-space: nowrap; }
+.compte-btn.compte-envoi { opacity: .55; cursor: progress; }
+/* Fenêtre d'alerte (déconnexion sans réseau) */
+.alerte-fond { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(0, 0, 0, .45); }
+.alerte { width: 100%; max-width: 440px; padding: 24px; border-radius: var(--r-md); background: var(--card); color: var(--ink); box-shadow: 0 12px 40px rgba(0, 0, 0, .25); }
+.alerte-titre { margin: 0 0 10px; font-family: var(--display); font-size: 1.25rem; line-height: 1.25; }
+.alerte p { margin: 0 0 18px; }
+.alerte-actions { display: flex; flex-direction: column; gap: 10px; }
 .compte-code { font-family: var(--display); font-weight: 800; letter-spacing: .06em; }
 .compte-sortir { font-size: .75rem; color: var(--ink-soft); }
 .compte:not(:empty) ~ .theme-btn { margin-left: 8px; }

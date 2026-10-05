@@ -906,6 +906,32 @@
           el("p", { class: "soft code-aide", text: "Sans code, ta progression reste seulement sur cet appareil." })))
     ];
   }
+  /* Déconnexion : les dernières réponses partent d'abord. Si elles ne peuvent pas partir (pas de réseau),
+     l'élève est prévenu et choisit : réessayer, ou se déconnecter quand même (ces réponses seront perdues). */
+  function deconnexion(force) {
+    var btn = zoneCompte && zoneCompte.querySelector(".compte-btn");
+    if (btn) { btn.disabled = true; btn.classList.add("compte-envoi"); }
+    COMPTES.deconnecter(force).then(function (fait) {
+      if (fait) {
+        store = {}; memoire = { chap: null };
+        try { localStorage.removeItem(KEY); } catch (e) { /* stockage indisponible */ }
+        location.hash = "#/";
+        afficher();
+        return;
+      }
+      if (btn) { btn.disabled = false; btn.classList.remove("compte-envoi"); }
+      var fond = el("div", { class: "alerte-fond", role: "dialog", "aria-modal": "true", "aria-labelledby": "alerte-titre" });
+      function fermer() { if (fond.parentNode) { fond.parentNode.removeChild(fond); } }
+      fond.appendChild(el("div", { class: "alerte" },
+        el("h2", { id: "alerte-titre", class: "alerte-titre", text: "Tes dernières réponses ne sont pas encore envoyées." }),
+        el("p", { text: "Vérifie ta connexion internet, puis réessaie. Si tu te déconnectes quand même, ces dernières réponses seront perdues." }),
+        el("div", { class: "alerte-actions" },
+          el("button", { class: "btn btn-dark", type: "button", text: "Réessayer", onclick: function () { fermer(); deconnexion(false); } }),
+          el("button", { class: "btn", type: "button", text: "Me déconnecter quand même", onclick: function () { fermer(); deconnexion(true); } }))));
+      document.body.appendChild(fond);
+      fond.querySelector("button").focus();
+    });
+  }
   /* Bouton de la barre du haut : le code de l'élève (pour se déconnecter) ou « Me connecter » */
   var zoneCompte = null;
   function majCompte() {
@@ -926,11 +952,7 @@
         "aria-label": "Connecté avec le code " + code + ". Me déconnecter",
         onclick: function () {
           if (!window.confirm("Te déconnecter ? Ta progression reste enregistrée en ligne avec ton code " + code + ". Sur cet appareil, elle sera effacée (pratique sur un ordinateur du lycée).")) { return; }
-          COMPTES.deconnecter();
-          store = {}; memoire = { chap: null };
-          try { localStorage.removeItem(KEY); } catch (e) { /* stockage indisponible */ }
-          location.hash = "#/";
-          afficher();
+          deconnexion(false);
         } }, el("span", { class: "compte-code", text: code }),
         el("span", { class: "compte-sortir" }, el("span", { class: "compte-long", text: "Me déconnecter" }), el("span", { class: "compte-court", text: "Quitter" }))));
     } else if (COMPTES.choix()) {
