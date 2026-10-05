@@ -18,7 +18,10 @@
     .suivi { padding-block: 24px 60px; }
     .suivi h1 { margin-bottom: 6px; }
     .suivi-form { display: grid; gap: 12px; max-width: 560px; }
-    .suivi-form input[type=password] { min-height: 48px; padding: 8px 14px; border: 2px solid var(--line); border-radius: var(--r-sm); background: var(--bg); color: var(--ink); font-size: 1.05rem; }
+    .mdp-ligne { display: flex; gap: 8px; }
+    .mdp-ligne input { flex: 1; min-width: 0; }
+    .oeil { padding: 0 14px; border: 2px solid var(--line); border-radius: var(--r-sm); background: var(--card); color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; }
+    .suivi-form input[type=password], .suivi-form input[type=text] { min-height: 48px; padding: 8px 14px; border: 2px solid var(--line); border-radius: var(--r-sm); background: var(--bg); color: var(--ink); font-size: 1.05rem; }
     .suivi-onglets { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 16px; }
     .suivi-onglets button[aria-pressed=true] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
     .tab-classe { width: 100%; border-collapse: collapse; background: var(--card); border-radius: var(--r-md); overflow: hidden; font-size: .95rem; }
@@ -70,9 +73,27 @@
       return n;
     }
     function vider(n) { while (n.firstChild) { n.removeChild(n.firstChild); } return n; }
-    function lireNoms() { try { return JSON.parse(localStorage.getItem(CLE_NOMS)) || {}; } catch (e) { return {}; } }
+    /* Noms et groupes : d'abord ceux de la feuille Google (colonnes C et D de l'onglet « Codes »),
+       envoyés seulement après le mot de passe ; sinon ceux d'un fichier ouvert dans ce navigateur. */
+    var feuille = null;
+    function nomFeuille(t) {
+      /* « Nina AMARO » devient « AMARO Nina » : les mots en majuscules (le nom) passent devant. */
+      var mots = String(t || "").trim().split(/\s+/).filter(Boolean), fin = [];
+      var parenthese = mots.findIndex(function (m) { return m.charAt(0) === "("; });
+      if (parenthese >= 0) { fin = mots.splice(parenthese); }
+      var nom = mots.filter(function (m) { return /\p{L}/u.test(m) && m === m.toUpperCase(); });
+      var prenom = mots.filter(function (m) { return nom.indexOf(m) < 0; });
+      return nom.concat(prenom, fin).join(" ");
+    }
+    function lireNoms() {
+      if (feuille) { var n = {}; Object.keys(feuille).forEach(function (c) { if (feuille[c].nom) { n[c] = nomFeuille(feuille[c].nom); } }); return n; }
+      try { return JSON.parse(localStorage.getItem(CLE_NOMS)) || {}; } catch (e) { return {}; }
+    }
     /* Codes qui ne sont pas des élèves de la classe (colonne « Groupe » = Autre) : tests, amis… */
-    function lireAutres() { try { return JSON.parse(localStorage.getItem(CLE_AUTRES)) || []; } catch (e) { return []; } }
+    function lireAutres() {
+      if (feuille) { return Object.keys(feuille).filter(function (c) { return feuille[c].groupe.toLowerCase() === "autre"; }); }
+      try { return JSON.parse(localStorage.getItem(CLE_AUTRES)) || []; } catch (e) { return []; }
+    }
     function pct(a, b) { return b ? Math.floor(a / b * 100) : 0; }
     function badge(p) { return el("span", { class: "pct p" + (p >= 100 ? 3 : p >= 60 ? 2 : p >= 25 ? 1 : 0), text: p + " %" }); }
     function quand(iso) {
@@ -120,24 +141,60 @@
       return r;
     }
 
+    /* ---------- Appel au script Google ----------
+       Google répond parfois lentement ou de travers (service gratuit), et un téléphone peut couper une demande
+       quand on change d'application : on abandonne au bout de 30 secondes et on réessaie, 3 fois en tout. */
+    function demander(donnees, essais, patience) {
+      var ctrl = window.AbortController ? new AbortController() : null;
+      var minuterie = ctrl ? setTimeout(function () { ctrl.abort(); }, 30000) : null;
+      return fetch(ADRESSE, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(donnees), signal: ctrl ? ctrl.signal : undefined })
+        .then(function (r) { return r.text(); })
+        .then(function (t) { clearTimeout(minuterie); var j = JSON.parse(t); if (!j || typeof j.ok !== "boolean") { throw new Error("réponse"); } return j; })
+        .catch(function (e) {
+          clearTimeout(minuterie);
+          if (essais <= 1) { throw e; }
+          if (patience) { patience(); }
+          return new Promise(function (ok) { setTimeout(ok, 1500); }).then(function () { return demander(donnees, essais - 1, patience); });
+        });
+    }
+
     /* ---------- Écran de connexion ---------- */
+    var motDePasse = "";   /* gardé en mémoire tant que la page est ouverte, pour « Actualiser » */
+    function ouvrir(mdpTape, erreur, bouton) {
+      erreur.textContent = ""; bouton.disabled = true; bouton.textContent = "Chargement…";
+      var lent = setTimeout(function () { bouton.textContent = "Google met un peu de temps, patientez…"; }, 8000);
+      function patience() { bouton.textContent = "Google met un peu de temps, patientez…"; }
+      function fin(message) { clearTimeout(lent); bouton.disabled = false; bouton.textContent = "Ouvrir le suivi"; erreur.textContent = message; }
+      Promise.all([
+        chargerChapitres().catch(function () { throw "chapitres"; }),
+        demander({ action: "suivi", motDePasse: mdpTape }, 3, patience).catch(function () { throw "google"; })
+      ]).then(function (res) {
+        var d = res[1];
+        if (!d.ok) { fin(d.erreur === "trop" ? "Trop d’essais : réessayez dans 10 minutes." : "Mot de passe incorrect."); return; }
+        clearTimeout(lent);
+        motDePasse = mdpTape;
+        feuille = d.eleves || null;
+        try { afficherSuivi(res[0], d); }
+        catch (e) { fin("La page de suivi n’a pas pu s’afficher. Rechargez la page et réessayez."); }
+      }, function (cause) {
+        fin(cause === "chapitres" ? "Les chapitres du site n’ont pas pu être chargés. Vérifiez la connexion internet, puis réessayez."
+          : "Google n’a pas répondu, même après 3 essais. Vérifiez la connexion internet, puis réessayez.");
+      });
+    }
     function ecranConnexion(message) {
       vider(zone);
       if (!ADRESSE) { zone.appendChild(el("div", { class: "card" }, el("p", { text: "Les codes élèves ne sont pas encore branchés : l’adresse du script Google est vide dans data/config.js (comptes.adresse)." }))); return; }
-      var mdp = el("input", { type: "password", autocomplete: "current-password", placeholder: "Mot de passe du suivi", "aria-label": "Mot de passe du suivi" });
+      var mdp = el("input", { type: "password", autocomplete: "current-password", autocapitalize: "off", autocorrect: "off", spellcheck: "false",
+        placeholder: "Mot de passe du suivi", "aria-label": "Mot de passe du suivi" });
+      var oeil = el("button", { class: "oeil", type: "button", "aria-pressed": "false", text: "Afficher",
+        onclick: function () { var voir = mdp.type === "password"; mdp.type = voir ? "text" : "password"; oeil.textContent = voir ? "Masquer" : "Afficher"; oeil.setAttribute("aria-pressed", String(voir)); mdp.focus(); } });
       var erreur = el("p", { class: "code-erreur", role: "alert", text: message || "" });
       var bouton = el("button", { class: "btn btn-dark", type: "submit", text: "Ouvrir le suivi" });
       zone.appendChild(el("form", { class: "card suivi-form", onsubmit: function (ev) {
-        ev.preventDefault(); erreur.textContent = ""; bouton.disabled = true; bouton.textContent = "Chargement…";
-        Promise.all([chargerChapitres(), fetch(ADRESSE, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify({ action: "suivi", motDePasse: mdp.value }) }).then(function (r) { return r.json(); })])
-          .then(function (res) {
-            var d = res[1];
-            if (!d.ok) { bouton.disabled = false; bouton.textContent = "Ouvrir le suivi"; erreur.textContent = d.erreur === "trop" ? "Trop d’essais : réessayez dans 10 minutes." : "Mot de passe incorrect."; return; }
-            afficherSuivi(res[0], d);
-          })
-          .catch(function () { bouton.disabled = false; bouton.textContent = "Ouvrir le suivi"; erreur.textContent = "Pas de réponse du script Google. Vérifiez la connexion et l’adresse."; });
-      } }, el("label", { text: "Mot de passe" }), mdp, bouton, erreur));
-      mdp.focus();
+        ev.preventDefault();
+        /* Espaces ajoutés par le clavier du téléphone : retirés. */
+        ouvrir(mdp.value.trim(), erreur, bouton);
+      } }, el("label", { text: "Mot de passe" }), el("div", { class: "mdp-ligne" }, mdp, oeil), bouton, erreur));
     }
 
     /* ---------- Noms des élèves (fichier de l'ordinateur, gardé dans ce navigateur seulement) ---------- */
@@ -191,10 +248,13 @@
         var a100 = eleves.filter(function (e) { return e.pct >= 100; }).length;
         zone.appendChild(el("p", { class: "lead", text: eleves.length + " élèves · " + actifs + (actifs > 1 ? " ont déjà utilisé leur code · " : " a déjà utilisé son code · ") + a100 + " à 100 %" }));
         zone.appendChild(el("div", { class: "suivi-onglets" },
-          [["classe", "La classe"], ["themes", "Thèmes à reprendre"], ["jeux", "Jeux"], ["noms", "Noms des élèves"]].map(function (o) {
+          [["classe", "La classe"], ["themes", "Thèmes à reprendre"], ["jeux", "Jeux"]].concat(feuille ? [] : [["noms", "Noms des élèves"]]).map(function (o) {
             return el("button", { class: "btn", type: "button", "aria-pressed": String(onglet === o[0]), text: o[1], onclick: function () { onglet = o[0]; rendre(); } });
           }),
-          el("button", { class: "btn", type: "button", text: "Actualiser", onclick: function () { ecranConnexion("Actualisation : entrez à nouveau le mot de passe."); } })));
+          el("button", { class: "btn", type: "button", text: "Actualiser", onclick: function () {
+            var b = this, err = b.parentNode.querySelector(".code-erreur") || b.parentNode.appendChild(el("p", { class: "code-erreur", role: "alert" }));
+            if (motDePasse) { ouvrir(motDePasse, err, b); } else { ecranConnexion(); }
+          } })));
 
         if (onglet === "noms") { zone.appendChild(blocNoms(rendre)); return; }
 
