@@ -604,3 +604,10 @@ tbody th { font-weight: 700; }
 /* Puces des sous-éléments : la couleur de leur fiche (lexique) ou de leur carte (flashcards) */
 .vocab .sous li::marker { color: var(--carte, var(--cc, var(--ink))); }
 .flash-sous span::before { color: var(--accent); }
+
+/* Témoin d'envoi à côté du code : vert = enregistré en ligne, orange qui clignote = envoi en attente */
+.compte-etat { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: 1px; background: var(--line); }
+.compte-etat.ok { background: #2FA36B; }
+.compte-etat.attente { background: var(--sun); animation: clignote 1.2s ease-in-out infinite; }
+@keyframes clignote { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .compte-etat.attente { animation: none; } }

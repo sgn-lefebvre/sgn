@@ -10,7 +10,7 @@
   var CFG = (window.SGN && window.SGN.config && window.SGN.config.comptes) || {};
   var ADRESSE = CFG.adresse || "";
   var CLE_CODE = "sgn-compte-code", CLE_CHOIX = "sgn-compte-choix", CLE_ATTENTE = "sgn-compte-a-envoyer", CLE_VERIF = "sgn-compte-a-verifier";
-  var CLE_JEUX = "sgn-compte-jeux-a-envoyer";
+  var CLE_JEUX = "sgn-compte-jeux-a-envoyer", CLE_COLIS = "sgn-compte-colis";
 
   function lire(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function ecrire(k, v) { try { if (v === null || v === undefined) { localStorage.removeItem(k); } else { localStorage.setItem(k, v); } } catch (e) { /* stockage indisponible */ } }
@@ -47,9 +47,12 @@
   /* Envoi de la progression : regroupé (une seconde après la dernière réponse), et réessayé plus tard
      si le réseau manque. Le dernier état à envoyer est gardé sur l'appareil. */
   var minuteur = null, enCours = null;
+  /* Témoin d'envoi : le site est prévenu à chaque changement (« attente » ou « ok »). */
+  function signaler() { try { window.dispatchEvent(new CustomEvent("sgn-envoi", { detail: { attente: !!lire(CLE_ATTENTE) } })); } catch (e) { /* vieux navigateur */ } }
   function planifierEnvoi(chapitres) {
     if (!API.code()) { return; }
     ecrire(CLE_ATTENTE, JSON.stringify(chapitres));
+    signaler();
     clearTimeout(minuteur);
     minuteur = setTimeout(envoyerAttente, 1200);
   }
@@ -62,12 +65,58 @@
       .catch(function () { /* hors ligne ou Google lent : on réessaiera */ })
       .then(function () {
         enCours = null;
+        signaler();
         /* Il reste quelque chose à envoyer (échec, ou nouvelles réponses pendant l'envoi) : nouvel essai bientôt. */
         if (lire(CLE_ATTENTE)) { clearTimeout(minuteur); minuteur = setTimeout(envoyerAttente, 20000); }
       });
     return enCours;
   }
   window.addEventListener("online", envoyerAttente);
+
+  /* « Colis » : la progression pas encore partie d'un élève qui s'est déconnecté (ordinateur du lycée sans réseau, par exemple).
+     Elle n'est jamais effacée : elle reste sur l'appareil avec le code de cet élève, et part dès que possible, sur sa fiche à lui,
+     même si un autre élève s'est connecté entre-temps. La feuille additionne : un envoi en double ne compte jamais deux fois. */
+  var minuteurColis = null, colisEnCours = null;
+  function colisEnAttente() {
+    try { var l = JSON.parse(lire(CLE_COLIS) || "[]"); return Array.isArray(l) ? l : []; } catch (e) { return []; }
+  }
+  function envoyerColis() {
+    if (colisEnCours) { return colisEnCours; }
+    var liste = colisEnAttente();
+    if (!ADRESSE || !liste.length) { return Promise.resolve(); }
+    var colis = liste[0];
+    colisEnCours = appel({ action: "sauver", code: colis.code, chapitres: colis.chapitres })
+      .then(function (r) {
+        /* Reçu (ou refusé pour de bon : code inconnu) : on le retire de la file. */
+        if (r && (r.ok || r.erreur === "code")) {
+          ecrire(CLE_COLIS, JSON.stringify(colisEnAttente().filter(function (c) { return c.id !== colis.id; })));
+          return true;
+        }
+        return false;
+      }, function () { return false; })
+      .then(function (suite) {
+        colisEnCours = null;
+        if (suite && colisEnAttente().length) { return envoyerColis(); }
+        if (colisEnAttente().length) { clearTimeout(minuteurColis); minuteurColis = setTimeout(envoyerColis, 20000); }
+      });
+    return colisEnCours;
+  }
+  window.addEventListener("online", envoyerColis);
+
+  /* Envoi express quand l'élève quitte la page (onglet fermé, autre appli, téléphone verrouillé) :
+     ce qui reste part immédiatement. On garde quand même tout sur l'appareil jusqu'à une confirmation normale. */
+  function envoiExpress() {
+    if (!ADRESSE || !navigator.sendBeacon) { return; }
+    try {
+      var code = API.code(), attente = lire(CLE_ATTENTE);
+      if (code && attente) { navigator.sendBeacon(ADRESSE, new Blob([JSON.stringify({ action: "sauver", code: code, chapitres: JSON.parse(attente) })], { type: "text/plain;charset=utf-8" })); }
+      colisEnAttente().slice(0, 3).forEach(function (c) {
+        navigator.sendBeacon(ADRESSE, new Blob([JSON.stringify({ action: "sauver", code: c.code, chapitres: c.chapitres })], { type: "text/plain;charset=utf-8" }));
+      });
+    } catch (e) { /* tant pis : l'envoi normal reprendra */ }
+  }
+  window.addEventListener("pagehide", envoiExpress);
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "hidden") { envoiExpress(); } });
 
   /* Résultats de jeux : chaque partie attend sur l'appareil jusqu'à ce que Google l'ait bien reçue
      (réseau absent, Google en panne, élève qui ferme le jeu trop vite). Chaque partie garde le code
@@ -142,18 +191,23 @@
       }).catch(function () { return null; });
     },
     aVerifier: function () { return !!lire(CLE_VERIF); },
-    /* Déconnexion : on envoie d'abord les dernières réponses. Renvoie une promesse : true si l'élève est déconnecté,
-       false si des réponses n'ont pas pu partir (il reste alors connecté ; « force » le déconnecte quand même).
-       Les parties de jeux en attente restent sur l'appareil et partiront plus tard, avec leur code. */
-    deconnecter: function (force) {
+    /* Déconnexion : immédiate, et sans rien perdre. Si des réponses ne sont pas encore parties, elles deviennent un « colis »
+       au nom de cet élève (son code), gardé sur l'appareil et envoyé dès que possible. Renvoie une promesse : true.
+       Les parties de jeux en attente restent aussi sur l'appareil et partiront plus tard, avec leur code. */
+    deconnecter: function () {
       clearTimeout(minuteur);
-      if (force) { effacerCompte(); return Promise.resolve(true); }
-      envoyerJeux();
-      return envoyerAttente().then(function () { return envoyerAttente(); }).then(function () {
-        if (lire(CLE_ATTENTE)) { return false; }
-        effacerCompte();
-        return true;
-      });
+      var code = API.code(), attente = lire(CLE_ATTENTE);
+      if (code && attente) {
+        try {
+          var liste = colisEnAttente();
+          liste.push({ id: Date.now() + "-" + Math.random().toString(36).slice(2, 8), code: code, chapitres: JSON.parse(attente) });
+          ecrire(CLE_COLIS, JSON.stringify(liste.slice(-30)));
+        } catch (e) { /* stockage indisponible */ }
+      }
+      effacerCompte();
+      signaler();
+      envoyerColis(); envoyerJeux();
+      return Promise.resolve(true);
     },
     planifierEnvoi: planifierEnvoi,
     envoyerMaintenant: envoyerAttente,
@@ -167,10 +221,12 @@
       ecrire(CLE_JEUX, JSON.stringify(liste.slice(-50)));
       return envoyerJeux().then(function () { return { ok: true, enAttente: jeuxEnAttente().length }; });
     },
-    aEnvoyer: function () { return !!lire(CLE_ATTENTE); }
+    aEnvoyer: function () { return !!lire(CLE_ATTENTE); },
+    colisEnAttente: function () { return colisEnAttente().length; }
   };
 
   window.SGN_COMPTES = API;
   if (API.code()) { setTimeout(envoyerAttente, 2000); }
   if (jeuxEnAttente().length) { setTimeout(envoyerJeux, 2500); }
+  if (colisEnAttente().length) { setTimeout(envoyerColis, 3000); }
 })();

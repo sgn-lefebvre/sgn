@@ -1084,6 +1084,15 @@
       fond.querySelector("button").focus();
     });
   }
+  /* Témoin d'envoi, à côté du code : point vert « enregistré en ligne », point orange qui clignote « envoi en attente ». */
+  function majTemoin() {
+    var t = zoneCompte && zoneCompte.querySelector(".compte-etat");
+    if (!t || !COMPTES) { return; }
+    var attente = COMPTES.aEnvoyer();
+    t.className = "compte-etat " + (attente ? "attente" : "ok");
+    t.parentNode.parentNode.setAttribute("title", (attente ? "Envoi en attente (il partira tout seul)" : "Tout est enregistré en ligne") + " · Me déconnecter");
+  }
+  window.addEventListener("sgn-envoi", majTemoin);
   /* Bouton de la barre du haut : le code de l'élève (pour se déconnecter) ou « Me connecter » */
   var zoneCompte = null;
   function majCompte() {
@@ -1105,8 +1114,9 @@
         onclick: function () {
           if (!window.confirm("Te déconnecter ? Ta progression reste enregistrée en ligne avec ton code " + code + ". Sur cet appareil, elle sera effacée (pratique sur un ordinateur du lycée).")) { return; }
           deconnexion(false);
-        } }, el("span", { class: "compte-code", text: code }),
+        } }, el("span", { class: "compte-code" }, el("i", { class: "compte-etat", "aria-hidden": "true" }), code),
         el("span", { class: "compte-sortir" }, el("span", { class: "compte-long", text: "Me déconnecter" }), el("span", { class: "compte-court", text: "Quitter" }))));
+      majTemoin();
     } else if (COMPTES.choix()) {
       zoneCompte.appendChild(el("a", { class: "compte-btn", href: "#/connexion", text: "Me connecter" }));
     }
