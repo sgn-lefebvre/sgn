@@ -173,6 +173,16 @@
     '<g fill="none" stroke="#1F7A5A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path class="eval-coche c1" d="M518 72 l6 6 l10 -12"/><path class="eval-coche c2" d="M518 100 l6 6 l10 -12"/><path class="eval-coche c3" d="M518 128 l6 6 l10 -12"/></g></g></g>' +
     '<path class="eval-etoile" d="M630 22 l7 15 l16 2 l-12 11 l3 16 l-14 -8 l-14 8 l3 -16 l-12 -11 l16 -2 z" fill="#F5BB5C"/></svg>';
 
+  /* Étiquette « Évaluation » (liste des chapitres, haut du chapitre) : le style bleu nuit de l'affiche de l'accueil,
+     avec une mini copie cochée, le délai en jaune et le même reflet. */
+  function etiquetteEval(ev, grande) {
+    var copie = '<svg width="' + (grande ? 18 : 12) + '" height="' + (grande ? 22 : 14) + '" viewBox="0 0 18 22" aria-hidden="true"><rect x="1" y="1" width="16" height="20" rx="3" fill="#fff"/><path d="M5 11l3 3 5-6" fill="none" stroke="#1F7A5A" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+    return el(grande ? "p" : "span", { class: grande ? "eval-etiquette grande" : "pill eval-etiquette" },
+      el("span", { class: "eval-copie", html: copie }), "Évaluation " + ev.texte,
+      grande ? el("span", { class: "eval-etoile-mini", "aria-hidden": "true", text: "★" }) : null,
+      el("span", { class: "eval-delai", text: ev.delai }));
+  }
+
   /* ---------- Blocs communs ---------- */
   /* Une couleur par chapitre, la même que dans la page de suivi du professeur : 10 couleurs
      (vert d'eau, soleil, corail, lavande, ciel, sauge, rose, moutarde, lagon, pêche), puis on recommence. */
@@ -219,7 +229,7 @@
         el("span", { class: "ch-num", "aria-hidden": "true", text: String(c.id) }),
         el("span", { class: "ch-name" }, "Chapitre " + c.id + " : " + c.titre,
           enCours ? el("span", { class: "pill", text: "en cours" }) : null,
-          ev && ev.chapitre.id === c.id ? el("span", { class: "pill pill-eval", text: "évaluation " + ev.texte + " · " + ev.delai }) : null,
+          ev && ev.chapitre.id === c.id ? etiquetteEval(ev, false) : null,
           el("small", { text: pluriel(c.cartes.length, "flashcard") + ", " + c.qcm.length + " QCM, " + pluriel(c.situations.length, "situation") + extras })),
         el("span", { class: "ch-pct" }, k.pct === 100 ? el("span", { class: "ch-medaille", title: "Chapitre maîtrisé", text: "🏅" }) : null,
           el("b", { text: k.pct + " %" }), barre(k.fait, k.total, "mini"))));
@@ -978,7 +988,7 @@
       el("p", { class: "crumbs", text: "Thème " + c.theme + " : " + nomTheme(c.theme) + " › Chapitre " + c.id }),
       el("h1", { class: "title", text: c.titre }),
       el("p", { class: "question", text: c.question }),
-      ev && ev.chapitre.id === c.id ? el("p", { class: "tag eval-tag", text: "Évaluation " + ev.texte + " · " + ev.delai }) : null,
+      ev && ev.chapitre.id === c.id ? etiquetteEval(ev, true) : null,
       libre ? entete : el("p", { class: "tag lock-tag", text: "Chapitre en cours en classe : synthèse et entraînement bientôt disponibles" }),
       el("nav", { class: "tabs tabs-" + onglets.length, id: "onglets", "aria-label": "Les rubriques du chapitre" }, onglets.map(function (o) {
         var ferme = fermes.indexOf(o[0]) >= 0;

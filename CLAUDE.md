@@ -146,7 +146,7 @@ Quand le professeur dit « construis le chapitre N » :
 
 ## Prochaine évaluation
 
-Réglée dans `data/config.js` : `evaluation: { date: "AAAA-MM-JJ", chapitre: N }`. Sur l'accueil, sous le titre « Prochaine évaluation », une affiche « copie parfaite » dans l'esprit des affiches des jeux (choix du professeur, après avoir écarté le post-it, le ticket et le sablier) : fond bleu nuit, une copie qui flotte avec trois coches vertes qui se dessinent, une étoile, un reflet qui passe, étiquettes « Chapitre N » et délai, bouton blanc (dessin `DESSIN_COPIE` dans `assets/app.js`) ; dans la liste des chapitres et en haut du chapitre, une étiquette jaune, droite (`--sun`). La pastille dit « dans N jours », puis « Demain ! » la veille et « Jour J, bonne chance ! » le jour même. Tout disparaît le lendemain de la date.
+Réglée dans `data/config.js` : `evaluation: { date: "AAAA-MM-JJ", chapitre: N }`. Sur l'accueil, sous le titre « Prochaine évaluation », une affiche « copie parfaite » dans l'esprit des affiches des jeux (choix du professeur, après avoir écarté le post-it, le ticket et le sablier) : fond bleu nuit, une copie qui flotte avec trois coches vertes qui se dessinent, une étoile, un reflet qui passe, étiquettes « Chapitre N » et délai, bouton blanc (dessin `DESSIN_COPIE` dans `assets/app.js`) ; dans la liste des chapitres et en haut du chapitre, une étiquette dans le même style bleu nuit (mini copie cochée, délai en jaune, reflet ; étoile en plus en haut du chapitre), fonction `etiquetteEval` dans `assets/app.js`. La pastille dit « dans N jours », puis « Demain ! » la veille et « Jour J, bonne chance ! » le jour même. Tout disparaît le lendemain de la date.
 
 ## Modifier sans casser la progression des élèves
 

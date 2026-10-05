@@ -225,8 +225,6 @@ tbody th { font-weight: 700; }
 .eval .pill { background: var(--ink); color: var(--bg); font-size: .9rem; padding: 2px 12px; }
 .eval-ch { font-weight: 700; margin-bottom: 0; }
 .eval .actions { margin-bottom: 0; }
-.pill-eval { background: var(--coral-soft); }
-.eval-tag { margin-bottom: 16px; }
 
 /* ---------- Onglets et jauges d'un chapitre ---------- */
 .ch-gauge { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-md); padding: 14px 18px; margin-bottom: 18px; }
@@ -546,11 +544,20 @@ tbody th { font-weight: 700; }
   .eval-corps { max-width: 78%; padding: 18px; }
   .eval-affiche::before { background: linear-gradient(90deg, rgba(8, 14, 30, .94) 0%, rgba(8, 14, 30, .8) 60%, rgba(8, 14, 30, .2) 100%); }
 }
-/* Les étiquettes « Évaluation » : le jaune du site, droites */
-.eval-tag, .pill-eval { background: var(--sun); color: #15231E; border: 0; }
-.eval-tag { padding: 6px 14px; }
+/* Les étiquettes « Évaluation » : le style bleu nuit de l'affiche de l'accueil (mini copie cochée, délai en jaune, reflet) */
+.eval-etiquette { position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 7px; color: #fff; font-weight: 700; border-radius: 99px;
+  background: radial-gradient(140% 160% at 85% 20%, #2B3F6B 0%, #14213D 50%, #0B1428 100%); vertical-align: middle; white-space: normal; }
+.pill.eval-etiquette { padding: 3px 4px 3px 9px; font-size: .78rem; margin: 5px 0 2px; }
+.eval-etiquette.grande { padding: 6px 6px 6px 8px; border-radius: 14px; font-size: .95rem; margin: 0 0 16px; }
+.eval-etiquette::after { content: ""; position: absolute; top: -40%; bottom: -40%; width: 24px; left: -40px; background: rgba(255, 255, 255, .22); transform: skewX(-20deg); animation: reflet 3.8s ease-in-out infinite; pointer-events: none; }
+.eval-copie { display: inline-flex; flex: none; }
+.eval-copie svg { display: block; }
+.eval-etoile-mini { color: var(--sun); }
+.eval-delai { flex: none; background: var(--sun); color: #15231E; border-radius: 99px; padding: 1px 8px; }
+.eval-etiquette.grande .eval-delai { padding: 2px 10px; }
+.ch-name .pill.eval-etiquette { display: inline-flex; margin-left: 0; }
 @media (prefers-reduced-motion: reduce) {
-  .eval-affiche::after { animation: none; display: none; }
+  .eval-affiche::after, .eval-etiquette::after { animation: none; display: none; }
   .eval-flotte, .eval-etoile { animation: none; }
   .eval-coche { animation: none; stroke-dashoffset: 0; }
 }
