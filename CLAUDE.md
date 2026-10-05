@@ -187,6 +187,20 @@ Objectif : qu'aucun élève ne tombe sur un problème, et que chaque donnée arr
 4. Après le diagnostic : ne laisser aucun serveur de test lancé, `data/config.js` sur le vrai Google.
 5. **Test de charge** (après un changement du script ou des envois, ou sur demande) : `node sources/outils/test-charge.js` envoie 30 connexions et 30 envois en même temps au vrai serveur (code de test du professeur seulement, progression renvoyée telle quelle). Attendu : 0 perdu, et la progression du code de test inchangée. Mesures du 5 octobre 2026 : ancien script, tout arrivé en 2 min 24 s au plus (la moitié du premier coup) ; script version 5 (écriture de la seule ligne qui change + journal), tout arrivé en 1 min 22 s au plus (environ deux tiers du premier coup) ; 0 perte dans les deux cas.
 
+## Créer quelque chose de nouveau (chapitre, jeu, QCM évalué…) : deux temps
+
+Choix du professeur : on crée d'abord, on branche et on teste les données seulement à la fin.
+
+1. **La création** : construire, montrer, ajuster autant de fois que le professeur le souhaite, et le placer où il veut dans l'appli. Pendant cette étape, ne pas parler de données ni de tests de réseau.
+2. **À la toute fin, une fois en place dans l'appli** : brancher l'envoi des données (feuille Google, page prof), puis tester en détail :
+   - jouer comme un élève, sur le site en ligne, avec un code de test (`sources/eleves/code-professeur.txt`, ou l'élève de test), jamais le code d'un vrai élève, et en largeur téléphone ;
+   - couper et remettre le réseau, fermer l'appli, se déconnecter sans réseau (colis), changer d'appareil ;
+   - vérifier chaque donnée sous le bon code dans la feuille et dans la page prof ;
+   - faire un bilan chiffré et honnête (ce qui est arrivé, ce qui manque, ce qui était réel et ce qui était simulé) ;
+   - donner au professeur un petit test à faire lui-même sur son téléphone (mode avion), puis vérifier dans la feuille que c'est arrivé.
+
+Ne jamais annoncer une création comme terminée avant la fin de l'étape 2.
+
 ## Publier
 
 - Avant de publier, laisser le professeur vérifier en ouvrant `index.html`.
