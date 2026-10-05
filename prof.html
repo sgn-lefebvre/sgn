@@ -23,11 +23,13 @@
   <style>
     /* ---------- Page de suivi : en-tête sombre, deux parties (la classe, élève par élève) ---------- */
     :root { --entete: #15231E; --entete-2: #22352E; --entete-txt: #EEF3EF; --entete-soft: #AFC2BA; --doux: #F4F7F5; --vide: #E3EAE6;
-      /* Une couleur par chapitre (1 vert d'eau, 2 jaune, 3 corail, 4 violet, 5 bleu, 6 vert), puis on recommence */
+      /* Une couleur par chapitre, les mêmes que sur le site élève (assets/style.css) : 10 couleurs, puis on recommence */
       --ch1: #70C4B4; --ch1s: #E5F3F0; --ch2: #F5BB5C; --ch2s: #FCEBCB; --ch3: #F09080; --ch3s: #FBE2DD;
-      --ch4: #A99BE0; --ch4s: #ECE8FA; --ch5: #7FB2E5; --ch5s: #E3EEF9; --ch6: #9CCB7A; --ch6s: #EAF4E1; }
+      --ch4: #A99BE0; --ch4s: #ECE8FA; --ch5: #7FB2E5; --ch5s: #E3EEF9; --ch6: #9CCB7A; --ch6s: #EAF4E1;
+      --ch7: #F4A6C6; --ch7s: #FCE6EF; --ch8: #E8C547; --ch8s: #F9F0CF; --ch9: #8FD3E8; --ch9s: #E2F4FA; --ch10: #F2B48A; --ch10s: #FCEADD; }
     :root[data-theme="dark"] { --entete: #0B1311; --entete-2: #1A2723; --doux: #16211E; --vide: #2D3C37;
-      --ch1s: #1C3632; --ch2s: #4D3C1D; --ch3s: #4B2C26; --ch4s: #2E2A4A; --ch5s: #1E3046; --ch6s: #253A1E; }
+      --ch1s: #1C3632; --ch2s: #4D3C1D; --ch3s: #4B2C26; --ch4s: #2E2A4A; --ch5s: #1E3046; --ch6s: #253A1E;
+      --ch7s: #47283A; --ch8s: #44391A; --ch9s: #1D3A44; --ch10s: #4A3122; }
     body { font-size: 1rem; }
     .p-entete { background: var(--entete); color: var(--entete-txt); }
     .p-entete-in { max-width: 1120px; margin: 0 auto; padding: 18px clamp(16px, 4vw, 32px) 0; }
@@ -411,7 +413,7 @@
     });
 
     /* Couleur d'un chapitre : style à poser sur un élément (--cc la couleur, --ccs sa version douce) */
-    function teinte(ch) { var n = ((ch.c.id - 1) % 6) + 1; return "--cc:var(--ch" + n + ");--ccs:var(--ch" + n + "s)"; }
+    function teinte(ch) { var n = ((ch.c.id - 1) % 10) + 1; return "--cc:var(--ch" + n + ");--ccs:var(--ch" + n + "s)"; }
 
     function preparer(chs, d) {
       tous = chs; chapitres = chs.filter(function (ch) { return ch.ouvert; }); jeux = d.jeux || {};
@@ -550,7 +552,7 @@
     function tableauEnsemble(liste) {
       function th(cle, texte, ch) {
         return el("th", { class: "tri", title: "Trier", onclick: function () { etatPage.tri = cle; rendre(); } },
-          ch ? el("span", { class: "pt", style: "display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:var(--ch" + (((ch.c.id - 1) % 6) + 1) + ")" }) : null,
+          ch ? el("span", { class: "pt", style: "display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:var(--ch" + (((ch.c.id - 1) % 10) + 1) + ")" }) : null,
           texte + (etatPage.tri === cle ? " ▾" : ""));
       }
       return el("div", { class: "p-carte" }, el("div", { class: "p-scroll" }, el("table", { class: "p-tab" },

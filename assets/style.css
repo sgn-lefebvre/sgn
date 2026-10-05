@@ -471,3 +471,125 @@ tbody th { font-weight: 700; }
   body { background: #fff; font-size: 11pt; }
   .table-wrap, .card, .def, .vocab div { box-shadow: none; }
 }
+
+/* ---------- Une couleur par chapitre (la même que dans la page de suivi du professeur) ----------
+   --cc : la couleur du chapitre, --ccs : sa version douce. Posées sur chaque ligne de chapitre, et sur #app dans un chapitre. */
+:root {
+  --ch1: #70C4B4; --ch1s: #E5F3F0; --ch2: #F5BB5C; --ch2s: #FCEBCB; --ch3: #F09080; --ch3s: #FBE2DD;
+  --ch4: #A99BE0; --ch4s: #ECE8FA; --ch5: #7FB2E5; --ch5s: #E3EEF9; --ch6: #9CCB7A; --ch6s: #EAF4E1;
+  --ch7: #F4A6C6; --ch7s: #FCE6EF; --ch8: #E8C547; --ch8s: #F9F0CF; --ch9: #8FD3E8; --ch9s: #E2F4FA; --ch10: #F2B48A; --ch10s: #FCEADD;
+}
+:root[data-theme="dark"] { --ch1s: #1C3632; --ch2s: #4D3C1D; --ch3s: #4B2C26; --ch4s: #2E2A4A; --ch5s: #1E3046; --ch6s: #253A1E;
+  --ch7s: #47283A; --ch8s: #44391A; --ch9s: #1D3A44; --ch10s: #4A3122; }
+.ch-row:not(.is-locked) { border-left: 7px solid var(--cc, var(--line)); }
+.ch-row:not(.is-locked) .ch-num { background: var(--cc, var(--coral)); color: #15231E; }
+.ch-row.is-maitrise { background: var(--ccs, var(--card)); }
+.ch-medaille { font-size: 1.15rem; line-height: 1; margin-right: 2px; }
+/* Les jauges de progression : la couleur du chapitre (dans la liste et dans le chapitre) ; ailleurs, le corail du site */
+.bar i, #app .bar i { background: var(--cc, var(--coral)); }
+.tabs a[aria-current="page"]:not(.is-locked) { background: var(--cc, var(--ink)); border-color: var(--cc, var(--ink)); color: #15231E; }
+#app .card.act { border-top: 6px solid var(--cc, var(--line)); }
+#app .t-block { border-top: 6px solid var(--cc, var(--line)); }
+
+/* Carte de la question : un bandeau de la couleur du chapitre */
+.q-carte { background: var(--card); border: 1px solid var(--line); border-top: 8px solid var(--cc, var(--coral)); border-radius: var(--r-lg); box-shadow: var(--shadow); padding: 4px 20px 20px; margin-top: 10px; }
+.q-carte .q-tags { margin-top: 14px; }
+@media (max-width: 480px) { .q-carte { padding: 2px 14px 16px; } }
+.pill-niveau.n1 { background: var(--ch1s); border: 1.5px solid var(--ch1); }
+.pill-niveau.n2 { background: var(--ch4s); border: 1.5px solid var(--ch4); }
+
+/* ---------- Animations ---------- */
+.choice { position: relative; }
+@keyframes pop { 0% { transform: scale(.92); } 60% { transform: scale(1.04); } 100% { transform: scale(1); } }
+@keyframes secoue { 0%, 100% { transform: translateX(0); } 20% { transform: translateX(-7px); } 40% { transform: translateX(7px); } 60% { transform: translateX(-4px); } 80% { transform: translateX(4px); } }
+@keyframes monte { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes envol { 0% { opacity: 0; transform: translateY(0) scale(.7); } 20% { opacity: 1; transform: translateY(-8px) scale(1.15); } 100% { opacity: 0; transform: translateY(-70px) scale(1.25); } }
+.anim-pop { animation: pop .38s ease-out; }
+.anim-secoue { animation: secoue .42s ease-in-out; }
+.anim-entree { animation: monte .3s ease-out; }
+.choice.is-ok.anim-pop { padding-right: 46px; }
+.choice.is-ok.anim-pop::after { content: "✓"; position: absolute; right: 16px; top: 50%; margin-top: -.6em; font-weight: 800; font-size: 1.3rem; line-height: 1.2; color: var(--ok); animation: pop .38s ease-out; }
+.plus-un { position: absolute; right: 52px; top: 20%; z-index: 3; font-family: var(--display); font-weight: 800; font-size: 1.6rem; color: var(--ok); pointer-events: none; animation: envol 1s ease-out forwards; }
+.flash-stack .plus-un { right: 24px; top: 10px; }
+.serie-badge { display: inline-block; background: var(--sun); color: #15231E; border-radius: 99px; padding: 4px 12px; font-weight: 800; margin: 0 0 8px; }
+.medaille { display: flex; align-items: center; gap: 12px; background: var(--sun-soft); border-radius: var(--r-md); padding: 12px 18px; font-family: var(--display); font-weight: 800; font-size: 1.5rem; margin: 6px 0 14px; }
+.medaille span { font-size: 2.4rem; line-height: 1; }
+.badge-valide { display: inline-block; background: var(--ok-soft); color: var(--ok); border-radius: 99px; padding: 6px 16px; font-weight: 800; margin: 6px 0 10px; }
+.fin-serie.is-fini .score { color: var(--ok); }
+.confettis { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 200; }
+@media (prefers-reduced-motion: reduce) {
+  .anim-pop, .anim-secoue, .anim-entree, .plus-un, .choice.is-ok.anim-pop::after { animation: none !important; }
+}
+
+/* ---------- Prochaine évaluation : affiche « copie parfaite » sur fond bleu nuit (comme les affiches des jeux) ---------- */
+.eval-affiche { position: relative; overflow: hidden; display: flex; align-items: flex-end; min-height: 210px; border: 3px solid #15231E; border-radius: var(--r-lg); box-shadow: var(--shadow); color: #fff;
+  background: radial-gradient(120% 140% at 85% 20%, #2B3F6B 0%, #14213D 45%, #0B1428 100%); }
+.eval-dessin { position: absolute; inset: 0; }
+.eval-dessin svg { display: block; width: 100%; height: 100%; }
+.eval-affiche::before { content: ""; position: absolute; inset: 0; z-index: 1; background: linear-gradient(90deg, rgba(8, 14, 30, .92) 0%, rgba(8, 14, 30, .72) 42%, rgba(8, 14, 30, 0) 74%); }
+.eval-affiche::after { content: ""; position: absolute; top: -30%; bottom: -30%; width: 70px; left: -120px; z-index: 2; background: rgba(255, 255, 255, .1); transform: skewX(-20deg); animation: reflet 3.8s ease-in-out infinite; pointer-events: none; }
+@keyframes reflet { 0% { left: -120px; } 55%, 100% { left: 115%; } }
+.eval-corps { position: relative; z-index: 3; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; padding: 20px 22px; max-width: 62%; }
+.eval-corps .pill { margin: 0; background: #fff; color: #15231E; }
+.eval-corps .pill-delai { background: var(--sun); }
+.eval-titre { margin: 2px 0 0; font-family: var(--display); font-weight: 800; font-size: clamp(1.45rem, 4vw, 2rem); line-height: 1.05; letter-spacing: -0.02em; }
+.eval-affiche .eval-ch { margin: 0 0 8px; font-weight: 600; opacity: .88; }
+.eval-btn { background: #fff; border-color: #fff; color: #15231E; }
+.eval-btn:hover { background: var(--sun); border-color: var(--sun); }
+.eval-flotte { animation: evalFlotte 4s ease-in-out infinite; }
+.eval-etoile { transform-box: fill-box; transform-origin: center; animation: evalFlotte 2.4s ease-in-out infinite; }
+.eval-coche { stroke-dasharray: 40; stroke-dashoffset: 40; animation: evalCoche .5s ease-out forwards; }
+.eval-coche.c1 { animation-delay: .4s; } .eval-coche.c2 { animation-delay: 1s; } .eval-coche.c3 { animation-delay: 1.6s; }
+@keyframes evalFlotte { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@keyframes evalCoche { to { stroke-dashoffset: 0; } }
+@media (max-width: 560px) {
+  .eval-corps { max-width: 78%; padding: 18px; }
+  .eval-affiche::before { background: linear-gradient(90deg, rgba(8, 14, 30, .94) 0%, rgba(8, 14, 30, .8) 60%, rgba(8, 14, 30, .2) 100%); }
+}
+/* Les étiquettes « Évaluation » : le jaune du site, droites */
+.eval-tag, .pill-eval { background: var(--sun); color: #15231E; border: 0; }
+.eval-tag { padding: 6px 14px; }
+@media (prefers-reduced-motion: reduce) {
+  .eval-affiche::after { animation: none; display: none; }
+  .eval-flotte, .eval-etoile { animation: none; }
+  .eval-coche { animation: none; stroke-dashoffset: 0; }
+}
+/* Jauge générale de l'accueil : un morceau par chapitre, dans sa couleur */
+.bar-morceaux { display: flex; gap: 2px; }
+.bar-morceaux i { border-radius: 0; }
+.bar-morceaux i:first-child { border-radius: 99px 0 0 99px; }
+.bar-morceaux i:last-child { border-radius: 0 99px 99px 0; }
+.bar-morceaux i:only-child { border-radius: 99px; }
+.legende-morceaux { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 8px; font-size: .85rem; font-weight: 700; color: var(--ink-soft); }
+.legende-morceaux span { display: inline-flex; align-items: center; gap: 6px; }
+.legende-morceaux b { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+
+/* ---------- Dans un chapitre, tout prend sa couleur (--cc, et --ccs pour les fonds doux) ----------
+   Synthèse, lexique, flashcards, questions : plus de mélange corail / jaune / vert d'eau (choix du professeur).
+   Hors d'un chapitre, --cc n'existe pas : on garde les couleurs d'origine. */
+.intro { border-left-color: var(--cc, var(--coral)); }
+.syn-h { border-bottom-color: var(--cc, var(--coral)); }
+.def { border-left-color: var(--cc, var(--sun)); }
+.ex, .scenario { background: var(--ccs, var(--teal-soft)); border-left-color: var(--cc, var(--teal)); }
+.keep { background: var(--ccs, var(--sun-soft)); }
+#app thead th { background: var(--ccs, var(--sun-soft)); }
+.flow li span { border-color: var(--cc, var(--line)); }
+.flow li + li::before { color: var(--cc, var(--ink)); }
+.syn li::marker { color: var(--cc, var(--ink)); }
+/* Lexique : les fiches prennent tour à tour les 10 couleurs de la palette (choix du professeur) */
+.vocab div:nth-child(10n+1) { border-left-color: var(--ch1); }
+.vocab div:nth-child(10n+2) { border-left-color: var(--ch2); }
+.vocab div:nth-child(10n+3) { border-left-color: var(--ch3); }
+.vocab div:nth-child(10n+4) { border-left-color: var(--ch4); }
+.vocab div:nth-child(10n+5) { border-left-color: var(--ch5); }
+.vocab div:nth-child(10n+6) { border-left-color: var(--ch6); }
+.vocab div:nth-child(10n+7) { border-left-color: var(--ch7); }
+.vocab div:nth-child(10n+8) { border-left-color: var(--ch8); }
+.vocab div:nth-child(10n+9) { border-left-color: var(--ch9); }
+.vocab div:nth-child(10n+0) { border-left-color: var(--ch10); }
+.review li { border-left-color: var(--cc, var(--coral)); }
+.choice.is-on { background: var(--ccs, var(--sun-soft)); }
+.pill-niveau.n1 { background: var(--ccs, var(--teal-soft)); border: 1.5px solid var(--cc, var(--teal)); }
+.pill-niveau.n2 { background: var(--cc, var(--coral)); border: 1.5px solid var(--cc, var(--coral)); color: #15231E; }
+#app .serie-badge { background: var(--cc, var(--sun)); }
+#app .medaille { background: var(--ccs, var(--sun-soft)); }

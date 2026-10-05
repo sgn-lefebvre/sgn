@@ -114,7 +114,6 @@
     return p;
   }
   function ajoute(liste, v) { if (liste.indexOf(v) < 0) { liste.push(v); } }
-  function retire(liste, v) { var i = liste.indexOf(v); if (i >= 0) { liste.splice(i, 1); } }
   /* Questions d'un chapitre, par type. Un « groupe » est ce que l'élève valide d'un bloc :
      une question de QCM, ou une situation (un mini-cas et ses questions, ou une situation simple).
      Les questions des situations sont numérotées à la suite, dans l'ordre du fichier. */
@@ -164,10 +163,38 @@
     if (reste < 0) { return null; }
     var texte = jour.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }).replace(/ 1 /, " 1er ");
     return { chapitre: chapitre(e.chapitre), texte: texte,
-      delai: reste === 0 ? "aujourd’hui" : reste === 1 ? "demain" : "dans " + reste + " jours" };
+      delai: reste === 0 ? "Jour J, bonne chance !" : reste === 1 ? "Demain !" : "dans " + reste + " jours" };
   }
 
+  /* Dessin de l'affiche de la prochaine évaluation : une copie avec trois coches et une étoile. */
+  var DESSIN_COPIE = '<svg viewBox="0 0 680 200" preserveAspectRatio="xMaxYMid slice" width="100%" height="100%">' +
+    '<g class="eval-flotte"><g transform="rotate(5 575 120)"><rect x="500" y="20" width="150" height="200" rx="10" fill="#fff"/>' +
+    '<rect x="518" y="40" width="70" height="8" rx="4" fill="#15231E"/><g fill="#D6DED9"><rect x="540" y="70" width="90" height="6" rx="3"/><rect x="540" y="98" width="80" height="6" rx="3"/><rect x="540" y="126" width="90" height="6" rx="3"/><rect x="540" y="154" width="70" height="6" rx="3"/></g>' +
+    '<g fill="none" stroke="#1F7A5A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path class="eval-coche c1" d="M518 72 l6 6 l10 -12"/><path class="eval-coche c2" d="M518 100 l6 6 l10 -12"/><path class="eval-coche c3" d="M518 128 l6 6 l10 -12"/></g></g></g>' +
+    '<path class="eval-etoile" d="M630 22 l7 15 l16 2 l-12 11 l3 16 l-14 -8 l-14 8 l3 -16 l-12 -11 l16 -2 z" fill="#F5BB5C"/></svg>';
+
   /* ---------- Blocs communs ---------- */
+  /* Une couleur par chapitre, la même que dans la page de suivi du professeur : 10 couleurs
+     (vert d'eau, soleil, corail, lavande, ciel, sauge, rose, moutarde, lagon, pêche), puis on recommence. */
+  function numCouleur(c) { return ((c.id - 1) % 10) + 1; }
+  function teinte(c) { var n = numCouleur(c); return "--cc:var(--ch" + n + ");--ccs:var(--ch" + n + "s)"; }
+  /* Jauge générale en morceaux : chaque chapitre ouvert ajoute sa part, dans sa couleur. */
+  function barreParChapitre(chapitres, total) {
+    var b = el("div", { class: "bar bar-morceaux", role: "progressbar", "aria-valuemin": "0", "aria-valuemax": String(total) });
+    var fait = 0;
+    chapitres.forEach(function (c) {
+      var k = compte(c); fait += k.fait;
+      if (!k.fait) { return; }
+      var i = el("i", { title: "Chapitre " + c.id + " : " + k.fait + " validées" });
+      i.style.width = (total ? k.fait / total * 100 : 0) + "%";
+      i.style.background = "var(--ch" + numCouleur(c) + ")";
+      b.appendChild(i);
+    });
+    b.setAttribute("aria-valuenow", String(fait));
+    return el("div", null, b, el("div", { class: "legende-morceaux", "aria-hidden": "true" }, chapitres.map(function (c) {
+      return el("span", null, el("b", { style: "background:var(--ch" + numCouleur(c) + ")" }), "Chap. " + c.id);
+    })));
+  }
   function barre(valeur, total, classe) {
     var pct = total ? Math.floor(valeur / total * 100) : 0;
     var i = el("i"); i.style.width = pct + "%";
@@ -179,7 +206,7 @@
     if (!ouvert(c)) {
       var dispo = [nbJeux ? pluriel(nbJeux, "jeu", "jeux") : "", nbDocs ? pluriel(nbDocs, "document") : ""].filter(Boolean).join(" et ");
       return el("li", null,
-        el("a", { class: "ch-row is-locked", href: "#/chapitre/" + c.id },
+        el("a", { class: "ch-row is-locked", href: "#/chapitre/" + c.id, style: teinte(c) },
           el("span", { class: "ch-num", "aria-hidden": "true", text: String(c.id) }),
           el("span", { class: "ch-name" }, "Chapitre " + c.id + " : " + c.titre,
             enCours ? el("span", { class: "pill", text: "en cours en classe" }) : null,
@@ -188,13 +215,14 @@
     }
     var k = compte(c);
     return el("li", null,
-      el("a", { class: "ch-row", href: "#/chapitre/" + c.id },
+      el("a", { class: "ch-row" + (k.pct === 100 ? " is-maitrise" : ""), href: "#/chapitre/" + c.id, style: teinte(c) },
         el("span", { class: "ch-num", "aria-hidden": "true", text: String(c.id) }),
         el("span", { class: "ch-name" }, "Chapitre " + c.id + " : " + c.titre,
           enCours ? el("span", { class: "pill", text: "en cours" }) : null,
-          ev && ev.chapitre.id === c.id ? el("span", { class: "pill pill-eval", text: "évaluation " + ev.texte }) : null,
+          ev && ev.chapitre.id === c.id ? el("span", { class: "pill pill-eval", text: "évaluation " + ev.texte + " · " + ev.delai }) : null,
           el("small", { text: pluriel(c.cartes.length, "flashcard") + ", " + c.qcm.length + " QCM, " + pluriel(c.situations.length, "situation") + extras })),
-        el("span", { class: "ch-pct" }, el("b", { text: k.pct + " %" }), barre(k.fait, k.total, "mini"))));
+        el("span", { class: "ch-pct" }, k.pct === 100 ? el("span", { class: "ch-medaille", title: "Chapitre maîtrisé", text: "🏅" }) : null,
+          el("b", { text: k.pct + " %" }), barre(k.fait, k.total, "mini"))));
   }
   function cadenas() {
     var n = el("span", { class: "lock-icon", "aria-hidden": "true" });
@@ -264,11 +292,15 @@
 
       ev ? el("section", null,
         el("h2", { class: "h2", text: "Prochaine évaluation" }),
-        el("div", { class: "card eval" },
-          el("p", { class: "eval-date" }, el("strong", { text: ev.texte.charAt(0).toUpperCase() + ev.texte.slice(1) }), el("span", { class: "pill", text: ev.delai })),
-          el("p", { class: "eval-ch", text: "Chapitre " + ev.chapitre.id + " : " + ev.chapitre.titre }),
-          ouvert(ev.chapitre) ? el("div", { class: "actions" },
-            el("a", { class: "btn btn-dark", href: "#/chapitre/" + ev.chapitre.id + "/entrainement", text: "M’entraîner sur le chapitre " + ev.chapitre.id })) : null)) : null,
+        /* Affiche « copie parfaite » (dans l'esprit des affiches des jeux) : fond bleu nuit, une copie qui flotte,
+           des coches qui se dessinent, une étoile, et un reflet qui passe. */
+        el("div", { class: "eval-affiche" },
+          el("span", { class: "eval-dessin", "aria-hidden": "true", html: DESSIN_COPIE }),
+          el("div", { class: "eval-corps" },
+            el("span", { class: "poster-tags" }, el("span", { class: "pill", text: "Chapitre " + ev.chapitre.id }), el("span", { class: "pill pill-delai", text: ev.delai })),
+            el("p", { class: "eval-titre", text: "Évaluation " + ev.texte }),
+            el("p", { class: "eval-ch", text: ev.chapitre.titre }),
+            ouvert(ev.chapitre) ? el("a", { class: "btn eval-btn", href: "#/chapitre/" + ev.chapitre.id + "/entrainement", text: "M’entraîner sur le chapitre " + ev.chapitre.id }) : null))) : null,
 
       el("section", null,
         el("h2", { class: "h2", text: "Ta progression" }),
@@ -276,7 +308,7 @@
           el("div", { class: "row-between" },
             el("strong", { text: pct + " % validé sur " + (CH_OUVERTS.length > 1 ? "les " + CH_OUVERTS.length + " chapitres ouverts" : "le chapitre ouvert") }),
             el("span", { class: "soft", text: fait + " sur " + total + " flashcards et questions" })),
-          barre(fait, total)),
+          barreParChapitre(CH_OUVERTS, total)),
         listeParTheme()),
 
       jeux.length ? el("section", null,
@@ -338,7 +370,7 @@
   function pageChapitres() {
     return [
       el("h1", { class: "title", text: "Les chapitres" }),
-      el("p", { class: "lead soft", text: pluriel(CH.length, "chapitre ouvert", "chapitres ouverts") + ". Les suivants arrivent au fil de l’année. À droite : ce que tu as déjà validé." }),
+      el("p", { class: "lead soft", text: pluriel(CH_OUVERTS.length, "chapitre ouvert", "chapitres ouverts") + ". Les suivants arrivent au fil de l’année. À droite : ce que tu as déjà validé." }),
       listeParTheme()
     ];
   }
@@ -436,21 +468,79 @@
   }
 
   /* ---------- Onglet : entraînement ---------- */
-  var COULEURS = ["coral", "sun", "teal"];
   var surProgression = null; /* met à jour la jauge du chapitre affichée en haut de page */
   var mouvement = !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
 
-  /* Flashcards : d'abord celles qui ne sont pas encore sues. L'élève s'arrête quand il veut. */
-  function lancerFlashcards(cont, c, retour, retourTexte) {
-    var p = prog(c.id), tous = c.cartes.map(function (k, i) { return i; });
-    var file = melanger(tous.filter(function (i) { return p.cartes.indexOf(i) < 0; }))
-      .concat(melanger(tous.filter(function (i) { return p.cartes.indexOf(i) >= 0; })));
-    var pos = 0, sues = 0;
+  /* ---------- Petites animations (coupées si le téléphone demande de réduire les animations) ---------- */
+  /* Jauge : elle part de sa valeur précédente et se remplit en douceur. */
+  function animerBarre(b, valeur, total) {
+    var cible = (total ? Math.floor(valeur / total * 100) : 0) + "%", i = b.firstChild;
+    b.setAttribute("aria-valuenow", String(valeur));
+    if (!mouvement) { i.style.width = cible; return; }
+    window.requestAnimationFrame(function () { window.requestAnimationFrame(function () { i.style.width = cible; }); });
+  }
+  /* « +1 » qui s'envole d'un bouton quand une question est validée pour la première fois. */
+  function plusUn(bouton) {
+    if (!mouvement) { return; }
+    var x = el("span", { class: "plus-un", "aria-hidden": "true", text: "+1" });
+    bouton.appendChild(x);
+    window.setTimeout(function () { if (x.parentNode) { x.parentNode.removeChild(x); } }, 1000);
+  }
+  /* Le score du bilan défile de 0 à sa valeur. */
+  function compter(noeud, valeur, total) {
+    if (!mouvement || valeur === 0) { return; }
+    var t0 = null, duree = 700;
+    function pas(t) {
+      if (t0 === null) { t0 = t; }
+      var r = Math.min(1, (t - t0) / duree);
+      noeud.textContent = Math.round(valeur * (1 - Math.pow(1 - r, 3))) + " / " + total;
+      if (r < 1) { window.requestAnimationFrame(pas); }
+    }
+    window.requestAnimationFrame(pas);
+  }
+  /* Confettis aux couleurs du site, dessinés sur une toile posée au-dessus de la page, puis retirés. */
+  function confettis(nombre) {
+    if (!mouvement || !document.body) { return; }
+    var toile = el("canvas", { class: "confettis", "aria-hidden": "true" }), ctx = toile.getContext && toile.getContext("2d");
+    if (!ctx) { return; }
+    var L = toile.width = window.innerWidth, H = toile.height = window.innerHeight;
+    document.body.appendChild(toile);
+    var teintes = ["#F09080", "#F5BB5C", "#70C4B4", "#A99BE0", "#7FB2E5", "#15231E"], bouts = [];
+    for (var n = 0; n < nombre; n++) {
+      bouts.push({ x: L / 2 + (Math.random() - .5) * L * .3, y: H * .35, vx: (Math.random() - .5) * 14, vy: -Math.random() * 13 - 4,
+        r: Math.random() * Math.PI, vr: (Math.random() - .5) * .3, l: 6 + Math.random() * 6, h: 4 + Math.random() * 4, c: teintes[n % teintes.length] });
+    }
+    var t0 = null;
+    /* Sécurité : si le navigateur met l'animation en pause (onglet caché), la toile part quand même. */
+    window.setTimeout(function () { if (toile.parentNode) { toile.parentNode.removeChild(toile); } }, 2500);
+    function pas(t) {
+      if (t0 === null) { t0 = t; }
+      var age = t - t0;
+      ctx.clearRect(0, 0, L, H);
+      bouts.forEach(function (b) {
+        b.vy += .35; b.vx *= .99; b.x += b.vx; b.y += b.vy; b.r += b.vr;
+        ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.r); ctx.globalAlpha = Math.max(0, 1 - age / 1800);
+        ctx.fillStyle = b.c; ctx.fillRect(-b.l / 2, -b.h / 2, b.l, b.h); ctx.restore();
+      });
+      if (age < 1800) { window.requestAnimationFrame(pas); } else if (toile.parentNode) { toile.parentNode.removeChild(toile); }
+    }
+    window.requestAnimationFrame(pas);
+  }
+
+  /* Flashcards : seulement celles qui ne sont pas encore sues. Une carte sue le reste.
+     Quand tout est su : « Refaire pour m'entraîner » (opts.entrainement), où une carte « À revoir » revient à la fin. */
+  function lancerFlashcards(cont, c, retour, retourTexte, opts) {
+    opts = opts || {};
+    var p = prog(c.id), tous = c.cartes.map(function (k, i) { return i; }), libre = !!opts.entrainement;
+    var file = libre ? melanger(tous.slice()) : melanger(tous.filter(function (i) { return p.cartes.indexOf(i) < 0; }));
+    var pos = 0, sues = 0, vues = 0, avant = { cartes: compte(c).cartes, chapitre: compte(c).pct };
+    var dejaVu = avant.cartes;
     function jauge() {
-      var k = compte(c);
+      var k = compte(c), b = barre(dejaVu, c.cartes.length);
+      animerBarre(b, k.cartes, c.cartes.length); dejaVu = k.cartes;
       return el("div", { class: "run-gauge" }, el("div", { class: "q-meta" },
-        el("span", { text: k.cartes + " sur " + c.cartes.length + " sues" }),
-        el("button", { class: "link-btn", type: "button", text: "J’arrête là", onclick: fin })), barre(k.cartes, c.cartes.length));
+        el("span", { text: libre ? "Entraînement libre : " + pluriel(file.length - pos, "carte restante", "cartes restantes") : k.cartes + " sur " + c.cartes.length + " sues" }),
+        el("button", { class: "link-btn", type: "button", text: "J’arrête là", onclick: fin })), b);
     }
     function carte() {
       vider(cont);
@@ -469,16 +559,18 @@
         sousListe(k, true));
       var face = el("button", { class: "flash", type: "button", "aria-pressed": "false" }, el("span", { class: "flash-inner" }, recto, verso));
       var annonce = el("p", { class: "sr-only", "aria-live": "polite" });
-      var pile = el("div", { class: "flash-stack c-" + COULEURS[i % 3] + (file.length - pos - 1 > 0 ? " has-more" : "") }, face);
+      /* Flashcards : les cartes prennent tour à tour les 10 couleurs de la palette (choix du professeur). */
+      var pile = el("div", { class: "flash-stack" + (file.length - pos - 1 > 0 ? " has-more" : ""), style: "--accent:var(--ch" + ((i % 10) + 1) + ")" }, face);
       function repondre(su) {
         if (repondu) { return; }
-        repondu = true;
-        if (su) { ajoute(p.cartes, i); sues++; } else { retire(p.cartes, i); }
+        repondu = true; vues++;
+        if (su) { if (p.cartes.indexOf(i) < 0) { plusUn(pile); } ajoute(p.cartes, i); sues++; }
+        else if (libre) { file.push(i); }   /* entraînement libre : la carte revient à la fin */
         sauver(); pos++;
         if (surProgression) { surProgression(); }
         if (!mouvement) { carte(); return; }
         pile.classList.add(su ? "leave-right" : "leave-left");
-        window.setTimeout(carte, 240);
+        window.setTimeout(carte, su ? 420 : 240);
       }
       var boutons = el("div", { class: "two-btn" },
         el("button", { class: "btn", type: "button", text: "À revoir", onclick: function () { repondre(false); } }),
@@ -499,21 +591,38 @@
     }
     function fin() {
       vider(cont);
-      var k = compte(c);
-      cont.appendChild(el("div", { class: "deck" },
-        el("h2", { class: "syn-h3", text: pos === 0 ? "Flashcards" : pluriel(pos, "carte vue", "cartes vues") + ", dont " + pluriel(sues, "sue") }),
-        el("p", { class: "score", text: k.cartes + " / " + c.cartes.length }),
-        el("p", { class: "lead", text: k.cartes === c.cartes.length ? "Tu sais toutes les définitions du chapitre." : "Flashcards sues sur ce chapitre. Les autres reviendront en premier la prochaine fois." }),
+      var k = compte(c), toutFait = pos >= file.length, total = c.cartes.length;
+      var chapitreFini = k.pct === 100 && avant.chapitre < 100;
+      var titre = vues === 0 && k.cartes === total ? "Tout est su ✓"
+        : vues === 0 ? "Flashcards"
+        : libre && toutFait ? "Entraînement terminé !"
+        : k.cartes === total && avant.cartes < total ? "Bravo, tu sais toutes les définitions !"
+        : pluriel(vues, "carte vue", "cartes vues") + ", dont " + pluriel(sues, "sue");
+      var message = vues === 0 && k.cartes === total ? "Tu sais déjà toutes les définitions du chapitre. Tu peux les revoir pour t’entraîner : ta jauge ne bougera pas."
+        : libre ? "Toutes les cartes ont été sues au moins une fois."
+        : k.cartes === total ? "Tu sais toutes les définitions du chapitre." : "Flashcards sues sur ce chapitre. Les autres reviendront la prochaine fois.";
+      var score = el("p", { class: "score", text: k.cartes + " / " + total });
+      cont.appendChild(el("div", { class: "deck fin-serie" + (k.cartes === total ? " is-fini" : "") },
+        chapitreFini ? el("p", { class: "medaille anim-pop" }, el("span", { "aria-hidden": "true", text: "🏅" }), "Chapitre maîtrisé !") : null,
+        el("h2", { class: "syn-h3", text: titre }),
+        score,
+        el("p", { class: "lead", text: message }),
         el("div", { class: "actions" },
-          pos < file.length ? el("button", { class: "btn btn-dark", type: "button", text: "Continuer", onclick: carte }) : null,
+          !toutFait ? el("button", { class: "btn btn-dark", type: "button", text: "Continuer", onclick: carte }) : null,
+          toutFait && k.cartes === total ? el("button", { class: "btn btn-dark", type: "button", text: "Refaire pour m’entraîner",
+            onclick: function () { lancerFlashcards(cont, c, retour, retourTexte, { entrainement: true }); } }) : null,
           el("button", { class: "btn", type: "button", text: retourTexte || "Retour à l’entraînement", onclick: retour }))));
       remonter(cont);
+      if (vues > 0) { compter(score, k.cartes, total); }
+      if (chapitreFini || (vues > 0 && (k.cartes === total && avant.cartes < total || libre && toutFait))) { confettis(chapitreFini ? 160 : 70); }
     }
     carte();
   }
 
-  /* QCM et situations : d'abord les questions jamais vues, puis les ratées, puis les validées.
-     Pas de longueur imposée : chaque bonne réponse est validée tout de suite.
+  /* QCM et situations : seulement ce qui n'est pas encore validé (d'abord jamais vu, puis raté).
+     Une question validée l'est pour toujours (comme dans la feuille du professeur) : une erreur plus tard ne l'enlève pas.
+     Quand tout est validé, la série s'arrête ; l'élève peut ensuite « Refaire pour m'entraîner » (opts.entrainement) :
+     tout revient, une question ratée revient à la fin jusqu'à être réussie, et la jauge ne bouge pas.
      Une situation à plusieurs questions (mini-cas) garde son texte affiché pendant toutes ses questions.
      opts.groupes : les groupes à travailler (par défaut tout le type) ; opts.titre : le nom de l'activité. */
   var NIVEAUX = { 1: "Niveau 1 · Je connais", 2: "Niveau 2 · Je réfléchis" };
@@ -525,21 +634,23 @@
   }
   function lancerQuestions(cont, c, type, retour, opts) {
     opts = opts || {};
-    var p = prog(c.id), D = donnees(c)[type], groupes = opts.groupes || D.groupes;
-    var nom = type === "qcm" ? "question" : "situation";
-    var ordre = melanger(groupes.filter(function (g) { return !groupeVu(p, type, g); }))
-      .concat(melanger(groupes.filter(function (g) { return groupeVu(p, type, g) && !groupeValide(p, type, g); })))
-      .concat(melanger(groupes.filter(function (g) { return groupeValide(p, type, g); })));
+    var p = prog(c.id), D = donnees(c)[type], groupes = opts.groupes || D.groupes, libre = !!opts.entrainement;
+    var ordre = libre ? melanger(groupes.slice())
+      : melanger(groupes.filter(function (g) { return !groupeVu(p, type, g); }))
+        .concat(melanger(groupes.filter(function (g) { return groupeVu(p, type, g) && !groupeValide(p, type, g); })));
     var file = [];
     ordre.forEach(function (g) { g.ids.forEach(function (id, k) { file.push({ id: id, k: k, n: g.ids.length, theme: g.theme }); }); });
-    var pos = 0, faites = 0, justes = 0, ratees = [];
+    var pos = 0, faites = 0, justes = 0, ratees = [], serie = 0;
+    var avant = { serie: valides(c, type, groupes), chapitre: compte(c).pct };
+    var dejaVu = valides(c, type, groupes);   /* pour animer la jauge depuis sa valeur précédente */
     function jauge() {
-      var n = valides(c, type, groupes);
+      var n = valides(c, type, groupes), b = barre(dejaVu, groupes.length);
+      animerBarre(b, n, groupes.length); dejaVu = n;
       return el("div", { class: "run-gauge" },
-        opts.titre ? el("p", { class: "run-title", text: opts.titre }) : null,
+        opts.titre ? el("p", { class: "run-title", text: opts.titre + (libre ? " · entraînement libre" : "") }) : null,
         el("div", { class: "q-meta" },
-          el("span", { text: n + " sur " + groupes.length + (type === "qcm" ? " validées" : " situations validées") }),
-          el("button", { class: "link-btn", type: "button", text: "J’arrête là", onclick: fin })), barre(n, groupes.length));
+          el("span", { text: libre ? "Entraînement libre : " + pluriel(file.length - pos, "question restante", "questions restantes") : n + " sur " + groupes.length + (type === "qcm" ? " validées" : " situations validées") }),
+          el("button", { class: "link-btn", type: "button", text: "J’arrête là", onclick: fin })), b);
     }
     function question() {
       vider(cont);
@@ -569,24 +680,35 @@
       });
       function repondre(choix) {
         var juste = choix.length === justesIdx.length && choix.every(function (x) { return justesIdx.indexOf(x) >= 0; });
+        var nouvelle = juste && p.ok[type].indexOf(f.id) < 0;
         boutons.forEach(function (x) {
           x.b.disabled = true;
           x.b.classList.remove("is-on");
-          if (justesIdx.indexOf(x.idx) >= 0) { x.b.classList.add("is-ok"); }
-          else if (choix.indexOf(x.idx) >= 0) { x.b.classList.add("is-ko"); }
+          if (justesIdx.indexOf(x.idx) >= 0) { x.b.classList.add("is-ok"); if (choix.indexOf(x.idx) >= 0) { x.b.classList.add("anim-pop"); } }
+          else if (choix.indexOf(x.idx) >= 0) { x.b.classList.add("is-ko", "anim-secoue"); }
         });
         if (valider) { var z = valider.parentNode; z.parentNode.removeChild(z); }
         ajoute(p.vu[type], f.id); faites++;
-        if (juste) { justes++; ajoute(p.ok[type], f.id); }
-        else { ratees.push(f.id); retire(p.ok[type], f.id); }
+        if (juste) { justes++; serie++; ajoute(p.ok[type], f.id); }
+        else {
+          serie = 0; ratees.push(f.id);
+          /* Entraînement libre : la question ratée revient à la fin, jusqu'à ce qu'elle soit réussie. */
+          if (libre) { file.push({ id: f.id, k: f.k, n: f.n, theme: f.theme }); }
+        }
         sauver(); pos++;
         if (surProgression) { surProgression(); }
         vider(zoneJauge).appendChild(jauge());
+        if (nouvelle) {
+          var choisi = boutons.filter(function (x) { return choix.indexOf(x.idx) >= 0; })[0];
+          if (choisi) { plusUn(choisi.b); }
+        }
         var dansLeCas = f.k + 1 < f.n;
         var suivant = el("button", { class: "btn btn-dark", type: "button", text: pos >= file.length ? "Voir mon bilan" : dansLeCas ? "Question suivante" : (type === "qcm" ? "Question suivante" : "Situation suivante"), onclick: question });
         var reponse = justesIdx.map(function (x) { return d.c[x]; }).join(" ; ");
-        retourZone.appendChild(el("div", { class: "feedback " + (juste ? "ok" : "ko") },
-          el("b", { text: juste ? "Bonne réponse, c’est validé" : "Ce n’est pas ça" }),
+        var palier = [3, 5, 10, 15, 20, 30].indexOf(serie) >= 0;
+        retourZone.appendChild(el("div", { class: "feedback " + (juste ? "ok" : "ko") + (juste ? " anim-entree" : "") },
+          palier ? el("span", { class: "serie-badge anim-pop", text: "🔥 " + serie + " d’affilée !" }) : null,
+          el("b", { text: juste ? (libre ? "Bonne réponse" : "Bonne réponse, c’est validé") : (libre ? "Ce n’est pas ça : elle reviendra à la fin" : "Ce n’est pas ça") }),
           el("span", { text: (juste ? "" : (multi ? "Les bonnes réponses : " : "La bonne réponse : ") + reponse + ". ") + d.e })));
         retourZone.appendChild(el("div", { class: "actions" }, suivant,
           pos < file.length ? el("button", { class: "btn", type: "button", text: "J’arrête là", onclick: fin }) : null));
@@ -598,12 +720,13 @@
       ].filter(Boolean);
       cont.appendChild(el("div", { class: "quiz" },
         zoneJauge,
-        it.s ? el("p", { class: "scenario" }, el("span", { class: "ex-label", text: "Situation" }), it.s) : null,
-        etiquettes.length ? el("p", { class: "q-tags" }, etiquettes) : null,
-        el("h2", { class: "q-text" + (etiquettes.length ? " with-tags" : ""), text: d.q }),
-        consigne(d, multi) ? el("p", { class: "q-hint", text: consigne(d, multi) }) : null,
-        liste,
-        valider ? el("div", { class: "actions" }, valider) : null,
+        el("div", { class: "q-carte" },
+          it.s ? el("p", { class: "scenario" }, el("span", { class: "ex-label", text: "Situation" }), it.s) : null,
+          etiquettes.length ? el("p", { class: "q-tags" }, etiquettes) : null,
+          el("h2", { class: "q-text" + (etiquettes.length ? " with-tags" : ""), text: d.q }),
+          consigne(d, multi) ? el("p", { class: "q-hint", text: consigne(d, multi) }) : null,
+          liste,
+          valider ? el("div", { class: "actions" }, valider) : null),
         retourZone));
       /* Dans un mini-cas, on garde le texte à l'écran : on ne remonte qu'au début d'une nouvelle situation. */
       if (f.k === 0) { remonter(cont); }
@@ -611,12 +734,27 @@
     }
     function fin() {
       vider(cont);
-      var n = valides(c, type, groupes), total = groupes.length;
-      cont.appendChild(el("div", { class: "quiz" },
+      var n = valides(c, type, groupes), total = groupes.length, toutFait = pos >= file.length;
+      var chapitreFini = compte(c).pct === 100 && avant.chapitre < 100;
+      var serieFinie = !libre && n === total && avant.serie < total;
+      var titre, message;
+      if (faites === 0 && n === total) { titre = "Tout est validé ✓"; message = "Tu as déjà réussi toutes ces " + (type === "qcm" ? "questions" : "situations") + ". Tu peux les refaire pour t’entraîner : ta jauge ne bougera pas."; }
+      else if (faites === 0) { titre = type === "qcm" ? "QCM" : "Situations"; message = ""; }
+      else {
+        var taux = justes / faites;
+        titre = libre && toutFait ? "Entraînement terminé !" : taux === 1 ? "Parfait !" : taux >= .7 ? "Bien joué !" : taux >= .4 ? "Tu progresses !" : "Continue, ça va venir !";
+        message = libre ? "Tout a été réussi au moins une fois. " + pluriel(justes, "bonne réponse", "bonnes réponses") + " sur " + pluriel(faites, "essai") + "."
+          : n === total ? "Tu as tout validé sur cette activité." : (type === "qcm" ? "Questions validées." : "Situations validées (une situation est validée quand toutes ses questions sont justes).") + " Les autres reviendront la prochaine fois.";
+      }
+      var score = el("p", { class: "score", text: n + " / " + total });
+      cont.appendChild(el("div", { class: "quiz fin-serie" + (n === total ? " is-fini" : "") },
         opts.titre ? el("p", { class: "run-title", text: opts.titre }) : null,
-        el("h2", { class: "syn-h3", text: faites === 0 ? (type === "qcm" ? "QCM" : "Situations") : "Cette fois : " + pluriel(faites, "question") + ", " + pluriel(justes, "bonne réponse", "bonnes réponses") }),
-        el("p", { class: "score", text: n + " / " + total }),
-        el("p", { class: "lead", text: n === total ? "Tu as tout validé sur cette activité." : (type === "qcm" ? "Questions validées." : "Situations validées (une situation est validée quand toutes ses questions sont justes).") + " Les autres reviendront en premier la prochaine fois." }),
+        chapitreFini ? el("p", { class: "medaille anim-pop" }, el("span", { "aria-hidden": "true", text: "🏅" }), "Chapitre maîtrisé !") : null,
+        serieFinie && !chapitreFini ? el("p", { class: "badge-valide anim-pop", text: (opts.titre ? opts.titre.split(" · ").pop() : "Activité") + " validé ✓" }) : null,
+        el("h2", { class: "syn-h3", text: titre }),
+        faites > 0 ? el("p", { class: "soft", text: "Cette fois : " + pluriel(faites, "question") + ", " + pluriel(justes, "bonne réponse", "bonnes réponses") }) : null,
+        score,
+        message ? el("p", { class: "lead", text: message }) : null,
         ratees.length ? el("div", null,
           el("h3", { class: "syn-h3", text: "À revoir" }),
           el("ul", { class: "review" }, ratees.filter(function (x, n2, a) { return a.indexOf(x) === n2; }).map(function (i) {
@@ -624,9 +762,13 @@
             return el("li", null, el("b", { text: (it.s ? it.s + " " : "") + d.q }), el("span", { text: "Réponse : " + bonnes(d).map(function (x) { return d.c[x]; }).join(" ; ") + ". " + d.e }));
           }))) : null,
         el("div", { class: "actions" },
-          pos < file.length ? el("button", { class: "btn btn-dark", type: "button", text: "Continuer", onclick: question }) : null,
+          !toutFait ? el("button", { class: "btn btn-dark", type: "button", text: "Continuer", onclick: question }) : null,
+          toutFait && n === total ? el("button", { class: "btn btn-dark", type: "button", text: "Refaire pour m’entraîner",
+            onclick: function () { lancerQuestions(cont, c, type, retour, Object.assign({}, opts, { entrainement: true })); } }) : null,
           el("button", { class: "btn", type: "button", text: opts.retourTexte || "Retour à l’entraînement", onclick: retour }))));
       remonter(cont);
+      if (faites > 0) { compter(score, n, total); }
+      if (chapitreFini || serieFinie || (libre && toutFait && faites > 0) || (faites > 0 && justes === faites)) { confettis(chapitreFini ? 160 : 70); }
     }
     question();
   }
@@ -836,7 +978,7 @@
       el("p", { class: "crumbs", text: "Thème " + c.theme + " : " + nomTheme(c.theme) + " › Chapitre " + c.id }),
       el("h1", { class: "title", text: c.titre }),
       el("p", { class: "question", text: c.question }),
-      ev && ev.chapitre.id === c.id ? el("p", { class: "tag eval-tag", text: "Évaluation " + ev.texte + ", " + ev.delai }) : null,
+      ev && ev.chapitre.id === c.id ? el("p", { class: "tag eval-tag", text: "Évaluation " + ev.texte + " · " + ev.delai }) : null,
       libre ? entete : el("p", { class: "tag lock-tag", text: "Chapitre en cours en classe : synthèse et entraînement bientôt disponibles" }),
       el("nav", { class: "tabs tabs-" + onglets.length, id: "onglets", "aria-label": "Les rubriques du chapitre" }, onglets.map(function (o) {
         var ferme = fermes.indexOf(o[0]) >= 0;
@@ -983,6 +1125,8 @@
 
     var info = {};
     vider(app);
+    /* Dans un chapitre, sa couleur (--cc) colore le bandeau, les jauges et les questions. */
+    app.style.cssText = cle.indexOf("chapitre-") === 0 ? teinte(chapitre(Number(parts[1]))) : "";
     contenu.forEach(function add(n) { if (Array.isArray(n)) { n.forEach(add); } else if (n && n.nodeType) { app.appendChild(n); } else if (n) { info = n; } });
     majIndicesTableaux();
 
