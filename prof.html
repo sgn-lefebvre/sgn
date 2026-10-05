@@ -22,8 +22,12 @@
   </script>
   <style>
     /* ---------- Page de suivi : en-tête sombre, deux parties (la classe, élève par élève) ---------- */
-    :root { --entete: #15231E; --entete-2: #22352E; --entete-txt: #EEF3EF; --entete-soft: #AFC2BA; --doux: #F4F7F5; --vide: #E3EAE6; }
-    :root[data-theme="dark"] { --entete: #0B1311; --entete-2: #1A2723; --doux: #16211E; --vide: #2D3C37; }
+    :root { --entete: #15231E; --entete-2: #22352E; --entete-txt: #EEF3EF; --entete-soft: #AFC2BA; --doux: #F4F7F5; --vide: #E3EAE6;
+      /* Une couleur par chapitre (1 vert d'eau, 2 jaune, 3 corail, 4 violet, 5 bleu, 6 vert), puis on recommence */
+      --ch1: #70C4B4; --ch1s: #E5F3F0; --ch2: #F5BB5C; --ch2s: #FCEBCB; --ch3: #F09080; --ch3s: #FBE2DD;
+      --ch4: #A99BE0; --ch4s: #ECE8FA; --ch5: #7FB2E5; --ch5s: #E3EEF9; --ch6: #9CCB7A; --ch6s: #EAF4E1; }
+    :root[data-theme="dark"] { --entete: #0B1311; --entete-2: #1A2723; --doux: #16211E; --vide: #2D3C37;
+      --ch1s: #1C3632; --ch2s: #4D3C1D; --ch3s: #4B2C26; --ch4s: #2E2A4A; --ch5s: #1E3046; --ch6s: #253A1E; }
     body { font-size: 1rem; }
     .p-entete { background: var(--entete); color: var(--entete-txt); }
     .p-entete-in { max-width: 1120px; margin: 0 auto; padding: 18px clamp(16px, 4vw, 32px) 0; }
@@ -45,8 +49,10 @@
     .p-erreur-maj { color: #F3A090; font-weight: 700; }
 
     /* Connexion */
-    .suivi-form { display: grid; gap: 12px; max-width: 520px; margin: 10px auto 0; }
-    .suivi-form h2 { font-size: 1.4rem; }
+    .suivi-form { display: grid; gap: 12px; max-width: 520px; margin: 10px auto 0; text-align: center; }
+    .suivi-form h2 { font-size: 1.5rem; }
+    .suivi-form p { margin: 0; }
+    .suivi-form .btn { width: 100%; }
     .mdp-ligne { display: flex; gap: 8px; }
     .mdp-ligne input { flex: 1; min-width: 0; }
     .oeil { padding: 0 14px; border: 2px solid var(--line); border-radius: var(--r-sm); background: var(--card); color: var(--ink); font: inherit; font-weight: 700; }
@@ -57,6 +63,9 @@
     .p-puce { border: 2px solid var(--line); background: var(--card); border-radius: 999px; padding: 7px 16px; font-weight: 700; font-size: .95rem; }
     .p-puce:hover { border-color: var(--ink); }
     .p-puce[aria-pressed=true] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+    .p-puce .pt { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 7px; vertical-align: 1px; }
+    .p-puce.chap[aria-pressed=true] { color: #15231E; }
+    .p-puce.chap[aria-pressed=true] .pt { background: #15231E !important; }
     .p-h2 { font-size: 1.35rem; margin: 0 0 12px; }
     .p-aide { color: var(--ink-soft); font-size: .88rem; margin: -4px 0 12px; }
 
@@ -72,6 +81,10 @@
     .p-chapitres { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; margin-bottom: 30px; }
     .p-chap { background: var(--card); border-radius: 20px; padding: 18px; box-shadow: var(--shadow); display: flex; gap: 16px; align-items: center; border: 2px solid transparent; text-align: left; }
     .p-chap:hover { border-color: var(--ink); }
+    .p-chap { position: relative; overflow: hidden; padding-top: 24px; }
+    .p-chap::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 8px; background: var(--cc); }
+    .p-chap.ferme { background: var(--ccs); box-shadow: none; }
+    .p-chap .cadenas { flex: none; width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; background: var(--card); font-size: 1.6rem; }
     .p-chap h3 { font-family: var(--text); font-size: 1rem; line-height: 1.25; letter-spacing: 0; font-weight: 700; }
     .p-chap p { margin: 4px 0 0; color: var(--ink-soft); font-size: .85rem; }
     .p-chap .voir { display: inline-block; margin-top: 8px; font-weight: 700; font-size: .85rem; }
@@ -112,6 +125,16 @@
     .p-legende span { display: flex; align-items: center; gap: 6px; }
     .p-legende i { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
     .p-titre-autres { font-size: 1.1rem; margin: 26px 0 6px; }
+    .p-bandeau { background: var(--ccs); border-radius: 20px; padding: 18px 20px; margin-bottom: 18px; display: flex; align-items: center; gap: 14px; }
+    .p-bandeau .num { flex: none; width: 52px; height: 52px; border-radius: 50%; background: var(--cc); color: #15231E; display: grid; place-items: center; font-family: var(--display); font-weight: 800; font-size: 1.5rem; }
+    .p-bandeau h2 { font-size: 1.3rem; line-height: 1.15; }
+    .p-bandeau p { margin: 4px 0 0; color: var(--ink-soft); font-size: .88rem; }
+    .p-section { font-size: 1.15rem; margin: 30px 0 10px; display: flex; align-items: center; gap: 10px; }
+    .p-section::before { content: ""; width: 6px; height: 22px; border-radius: 3px; background: var(--cc); }
+    .p-det th.theme { background: var(--ccs); }
+    .p-pas-joue { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 0; }
+    .p-pas-joue span { background: var(--card); border: 1.5px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: .85rem; cursor: pointer; }
+    .p-ferme { background: var(--card); border-radius: 20px; padding: 18px 20px; color: var(--ink-soft); }
     .p-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
     .p-vide { background: var(--card); border-radius: 20px; padding: 22px; color: var(--ink-soft); }
 
@@ -135,7 +158,8 @@
     .p-code b { display: inline-block; font-family: var(--display); font-size: 1.3rem; letter-spacing: .06em; background: var(--entete-2); padding: 6px 14px; border-radius: 12px; }
     .p-code small { display: block; color: var(--entete-soft); font-size: .8rem; margin-top: 4px; }
     .p-fiche { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 18px 20px; margin-bottom: 16px; }
-    .p-fiche-tete { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+    .p-fiche { overflow: hidden; }
+    .p-fiche-tete { display: flex; align-items: center; gap: 14px; margin: -18px -20px 10px; padding: 14px 20px; background: var(--ccs, var(--doux)); border-top: 8px solid var(--cc, var(--line)); }
     .p-fiche-tete h3 { font-family: var(--text); font-size: 1.05rem; line-height: 1.25; letter-spacing: 0; font-weight: 700; }
     .p-fiche-tete p { margin: 2px 0 0; color: var(--ink-soft); font-size: .85rem; }
     .p-act { border-top: 1px solid var(--line); padding: 12px 0; }
@@ -255,7 +279,8 @@
         var src = []; html.replace(/<script src="(data\/ch[^"]+)"><\/script>/g, function (m, s) { src.push(s); });
         return src.reduce(function (p, s) { return p.then(function () { return new Promise(function (ok, ko) { var x = document.createElement("script"); x.src = s; x.onload = ok; x.onerror = ko; document.body.appendChild(x); }); }); }, Promise.resolve());
       }).then(function () {
-        return window.SGN.chapitres.filter(function (c) { return !c.verrouille && c.cartes.length; }).sort(function (a, b) { return a.id - b.id; }).map(function (c) {
+        /* Chapitres ouverts (progression), et chapitres verrouillés qui ont déjà un jeu (leur onglet montre les parties) */
+        return window.SGN.chapitres.filter(function (c) { return (!c.verrouille && c.cartes.length) || (c.jeux || []).length; }).sort(function (a, b) { return a.id - b.id; }).map(function (c) {
           var cas = [], nbQSit = 0;
           c.situations.forEach(function (s) {
             var ids = (s.questions || [s]).map(function () { return nbQSit++; });
@@ -266,7 +291,7 @@
             c.qcm.forEach(function (q, k) { if (q.theme === n) { (q.niveau === 2 ? q2 : q1).push(k); } });
             return { nom: typeof t === "string" ? t : t.nom, q1: q1, q2: q2, cas: cas.filter(function (g) { return g.theme === n; }) };
           });
-          return { c: c, cas: cas, nbQSit: nbQSit, themes: themes, total: c.cartes.length + c.qcm.length + nbQSit };
+          return { c: c, ouvert: !c.verrouille && c.cartes.length > 0, cas: cas, nbQSit: nbQSit, themes: themes, total: c.cartes.length + c.qcm.length + nbQSit };
         });
       });
       chapitresCharges.catch(function () { chapitresCharges = null; });
@@ -379,13 +404,17 @@
 
     /* ---------- État de la page ---------- */
     var etatPage = { partie: "classe", vue: "ensemble", code: null, tri: "nom" };
-    var chapitres = [], eleves = [], classe = [], autres = [], jeux = {};
+    /* chapitres : ceux ouverts aux élèves (progression) ; tous : ceux qui ont un onglet (ouverts, ou verrouillés avec un jeu) */
+    var chapitres = [], tous = [], eleves = [], classe = [], autres = [], jeux = {};
     document.querySelectorAll(".p-partie").forEach(function (b) {
       b.addEventListener("click", function () { etatPage.partie = b.getAttribute("data-partie"); rendre(); window.scrollTo(0, 0); });
     });
 
+    /* Couleur d'un chapitre : style à poser sur un élément (--cc la couleur, --ccs sa version douce) */
+    function teinte(ch) { var n = ((ch.c.id - 1) % 6) + 1; return "--cc:var(--ch" + n + ");--ccs:var(--ch" + n + "s)"; }
+
     function preparer(chs, d) {
-      chapitres = chs; jeux = d.jeux || {};
+      tous = chs; chapitres = chs.filter(function (ch) { return ch.ouvert; }); jeux = d.jeux || {};
       var noms = lireNoms(), listeAutres = lireAutres(), parCode = {};
       d.codes.forEach(function (code) { parCode[code] = {}; });
       d.progression.forEach(function (l) { if (parCode[l.code]) { parCode[l.code][l.id] = l; } });
@@ -413,17 +442,58 @@
       document.querySelectorAll(".p-partie").forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-partie") === etatPage.partie)); });
       if (etatPage.partie === "eleve") { rendreEleve(); } else { rendreClasse(); }
     }
+    function cliquable(e) {
+      return { class: "ligne-eleve", tabindex: "0", onclick: function () { ouvrirFiche(e.code); }, onkeydown: function (ev) { if (ev.key === "Enter") { ouvrirFiche(e.code); } } };
+    }
+
+    /* ---------- Jeux : les parties, rangées dans le chapitre du jeu ---------- */
+    function infoJeu(id) {
+      var r = { titre: id, ch: null };
+      tous.forEach(function (ch) { (ch.c.jeux || []).forEach(function (j) { if (j.id === id) { r = { titre: j.titre, ch: ch }; } }); });
+      return r;
+    }
+    function parties(id) {
+      var v = jeux[id] || [], ent = v[0] || [], ic = ent.indexOf("Code"), idate = ent.indexOf("Date");
+      return { ent: ent, lignes: v.slice(1).map(function (l) { return { code: l[ic], date: l[idate], l: l }; })
+        .sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); }) };
+    }
+    function sectionJeu(id, titre) {
+      var p = parties(id), joue = {};
+      p.lignes.forEach(function (x) { joue[x.code] = true; });
+      var bloc = [el("h3", { class: "p-section", text: "Jeu · " + titre })];
+      bloc.push(el("p", { class: "p-aide", text: pluriel(p.lignes.length, "partie", "parties") + (p.lignes.length > 1 ? ", la plus récente en haut." : ".") }));
+      if (p.lignes.length) {
+        var cols = p.ent.map(function (h, k) { return k; }).filter(function (k) { return p.ent[k] !== "Code" && p.ent[k] !== "Date"; });
+        bloc.push(el("div", { class: "p-carte" }, el("div", { class: "p-scroll" }, el("table", { class: "p-tab" },
+          el("thead", null, el("tr", null, el("th", { text: "Élève" }), el("th", { text: "Date" }), cols.map(function (k) { return el("th", { text: p.ent[k] }); }))),
+          el("tbody", null, p.lignes.map(function (x) {
+            var e = eleves.filter(function (y) { return y.code === x.code; })[0];
+            return el("tr", e ? cliquable(e) : null, el("td", null, e ? nomCellule(e) : String(x.code)), el("td", { class: "p-quand", text: quand(x.date) }),
+              cols.map(function (k) { return el("td", { text: String(x.l[k]) }); }));
+          }))))));
+      }
+      var manquent = classe.filter(function (e) { return !joue[e.code]; });
+      if (manquent.length) {
+        bloc.push(el("p", { class: "p-aide", style: "margin-top:12px", text: "Pas encore joué (" + manquent.length + ") :" }));
+        bloc.push(el("div", { class: "p-pas-joue" }, manquent.map(function (e) { return el("span", { role: "button", tabindex: "0", text: e.nom, onclick: function () { ouvrirFiche(e.code); } }); })));
+      } else if (classe.length) {
+        bloc.push(el("p", { class: "p-aide", text: "Toute la classe a joué." }));
+      }
+      return bloc;
+    }
 
     /* ==================== Partie 1 : la classe ==================== */
     function rendreClasse() {
       var v = etatPage.vue;
       zone.appendChild(el("div", { class: "p-sous" },
-        [["ensemble", "Vue d’ensemble"]].concat(chapitres.map(function (ch) { return [ch.c.id, "Chapitre " + ch.c.id]; }), [["jeux", "Jeux"]]).map(function (o) {
-          return el("button", { class: "p-puce", type: "button", "aria-pressed": String(v === o[0]), text: o[1], onclick: function () { etatPage.vue = o[0]; rendre(); } });
+        el("button", { class: "p-puce", type: "button", "aria-pressed": String(v === "ensemble"), text: "Vue d’ensemble", onclick: function () { etatPage.vue = "ensemble"; rendre(); } }),
+        tous.map(function (ch) {
+          var actif = v === ch.c.id;
+          return el("button", { class: "p-puce chap", type: "button", "aria-pressed": String(actif), style: teinte(ch) + (actif ? ";background:var(--cc);border-color:var(--cc)" : ""),
+            onclick: function () { etatPage.vue = ch.c.id; rendre(); } }, el("span", { class: "pt", style: "background:var(--cc)" }), "Chapitre " + ch.c.id);
         })));
-      if (v === "jeux") { vueJeux(); }
-      else if (v === "ensemble" || !chapitres.some(function (ch) { return ch.c.id === v; })) { vueEnsemble(); }
-      else { vueChapitre(chapitres.filter(function (ch) { return ch.c.id === v; })[0]); }
+      var ch = tous.filter(function (x) { return x.c.id === v; })[0];
+      if (ch) { vueChapitre(ch); } else { vueEnsemble(); }
     }
 
     function vueEnsemble() {
@@ -439,10 +509,18 @@
       if (!Object.keys(lireNoms()).length) { zone.appendChild(blocNoms()); }
 
       zone.appendChild(el("h2", { class: "p-h2", text: "Les chapitres" }));
-      zone.appendChild(el("div", { class: "p-chapitres" }, chapitres.map(function (ch, k) {
+      zone.appendChild(el("div", { class: "p-chapitres" }, tous.map(function (ch) {
+        var aller = function () { etatPage.vue = ch.c.id; rendre(); window.scrollTo(0, 0); };
+        if (!ch.ouvert) {
+          var nbJ = (ch.c.jeux || []).reduce(function (s, j) { return s + parties(j.id).lignes.length; }, 0);
+          return el("button", { class: "p-chap ferme", type: "button", style: teinte(ch), onclick: aller }, el("span", { class: "cadenas", "aria-hidden": "true", text: "🔒" }),
+            el("div", null, el("h3", { text: "Chapitre " + ch.c.id + " · " + ch.c.titre }),
+              el("p", { text: "En cours en classe · " + pluriel(nbJ, "partie de jeu", "parties de jeux") }), el("span", { class: "voir", text: "Voir le chapitre →" })));
+        }
+        var k = chapitres.indexOf(ch);
         var m = classe.length ? Math.floor(classe.reduce(function (s, e) { return s + e.res[k].pct; }, 0) / classe.length) : 0;
         var fini = classe.filter(function (e) { return e.res[k].pct >= 100; }).length;
-        return el("button", { class: "p-chap", type: "button", onclick: function () { etatPage.vue = ch.c.id; rendre(); } }, anneau(m),
+        return el("button", { class: "p-chap", type: "button", style: teinte(ch), onclick: aller }, anneau(m),
           el("div", null, el("h3", { text: "Chapitre " + ch.c.id + " · " + ch.c.titre }),
             el("p", { text: "Moyenne de la classe · " + pluriel(fini, "élève", "élèves") + " à 100 %" }), el("span", { class: "voir", text: "Voir le détail →" })));
       })));
@@ -455,6 +533,8 @@
         zone.appendChild(el("p", { class: "p-aide", text: "Ils ne comptent pas dans les chiffres de la classe." }));
         zone.appendChild(tableauEnsemble(autres));
       }
+      /* Jeux qui ne sont rattachés à aucun chapitre (ancien identifiant) */
+      Object.keys(jeux).filter(function (id) { return !infoJeu(id).ch; }).forEach(function (id) { sectionJeu(id, id).forEach(function (n) { zone.appendChild(n); }); });
       zone.appendChild(el("div", { class: "p-actions" }, el("button", { class: "btn", type: "button", text: "Télécharger le tableau (CSV)", onclick: exporter })));
     }
     function trier(liste) {
@@ -462,96 +542,86 @@
       l.sort(function (a, b) {
         if (t === "maj") { return String(b.maj || "").localeCompare(String(a.maj || "")); }
         if (t === "total") { return b.pct - a.pct; }
-        if (typeof t === "number") { return b.res[t].pct - a.res[t].pct; }
+        if (typeof t === "number" && a.res[t]) { return b.res[t].pct - a.res[t].pct; }
         return a.nom.localeCompare(b.nom, "fr");
       });
       return l;
     }
     function tableauEnsemble(liste) {
-      function th(cle, texte) { return el("th", { class: "tri", title: "Trier", onclick: function () { etatPage.tri = cle; rendre(); } }, texte + (etatPage.tri === cle ? " ▾" : "")); }
+      function th(cle, texte, ch) {
+        return el("th", { class: "tri", title: "Trier", onclick: function () { etatPage.tri = cle; rendre(); } },
+          ch ? el("span", { class: "pt", style: "display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;background:var(--ch" + (((ch.c.id - 1) % 6) + 1) + ")" }) : null,
+          texte + (etatPage.tri === cle ? " ▾" : ""));
+      }
       return el("div", { class: "p-carte" }, el("div", { class: "p-scroll" }, el("table", { class: "p-tab" },
-        el("thead", null, el("tr", null, th("nom", "Élève"), chapitres.map(function (ch, k) { return th(k, "Chap. " + ch.c.id); }), th("total", "Total"), th("maj", "Dernière activité"))),
+        el("thead", null, el("tr", null, th("nom", "Élève"), th("total", "Total"), chapitres.map(function (ch, k) { return th(k, "Chap. " + ch.c.id, ch); }), th("maj", "Dernière activité"))),
         el("tbody", null, trier(liste).map(function (e) {
           var j = jours(e.maj);
-          return el("tr", { class: "ligne-eleve", tabindex: "0", onclick: function () { ouvrirFiche(e.code); }, onkeydown: function (ev) { if (ev.key === "Enter") { ouvrirFiche(e.code); } } },
+          return el("tr", cliquable(e),
             el("td", null, nomCellule(e)),
+            el("td", null, el("div", { class: "p-mini" }, el("div", { class: "b" }, el("i", { style: "width:" + e.pct + "%;background:" + couleur(e.pct) })), el("em", { text: e.pct + " %" }))),
             e.res.map(function (r) { return el("td", null, el("div", { class: "p-mini" }, el("div", { class: "b" }, el("i", { style: "width:" + r.pct + "%;background:" + couleur(r.pct) })), el("em", { text: r.pct + " %" }))); }),
-            el("td", null, el("strong", { text: e.pct + " %" })),
             el("td", { class: "p-quand" + (j === null || j > 7 ? " vieux" : ""), text: quand(e.maj) }));
         })))));
     }
     function exporter() {
-      var lignes = [["Élève", "Code", "Groupe"].concat(chapitres.map(function (ch) { return "Chapitre " + ch.c.id + " (%)"; }), ["Total (%)", "Dernière activité"])];
-      eleves.forEach(function (e) { lignes.push([e.nom, e.code, e.autre ? "Autre" : "Élève"].concat(e.res.map(function (r) { return r.pct; }), [e.pct, e.maj || ""])); });
+      var lignes = [["Élève", "Code", "Groupe", "Total (%)"].concat(chapitres.map(function (ch) { return "Chapitre " + ch.c.id + " (%)"; }), ["Dernière activité"])];
+      eleves.forEach(function (e) { lignes.push([e.nom, e.code, e.autre ? "Autre" : "Élève", e.pct].concat(e.res.map(function (r) { return r.pct; }), [e.maj || ""])); });
       var blob = new Blob(["﻿" + lignes.map(function (l) { return l.join(";"); }).join("\n")], { type: "text/csv" });
       var a = el("a", { href: URL.createObjectURL(blob), download: "suivi-sgn.csv" }); document.body.appendChild(a); a.click(); a.remove();
     }
 
+    /* Un chapitre : d'abord la progression de toute la classe, puis (s'il y en a) le QCM évalué, puis les jeux */
     function vueChapitre(ch) {
-      var k = chapitres.indexOf(ch), c = ch.c;
-      zone.appendChild(el("h2", { class: "p-h2", text: "Chapitre " + c.id + " · " + c.titre }));
-      zone.appendChild(el("p", { class: "p-aide", text: "Les mêmes chiffres que sur les écrans des élèves. Cliquez sur un élève pour ouvrir sa fiche." }));
-      function tableau(liste, avecMoyenne) {
-        var entete1 = el("tr", null, el("th", { rowspan: "2", text: "Élève" }), el("th", { rowspan: "2", class: "n pre", text: "Flashcards" }),
-          ch.themes.map(function (t) { return el("th", { colspan: "3", class: "theme", text: t.nom }); }),
-          ch.themes.length ? null : [el("th", { rowspan: "2", class: "n pre", text: "QCM" }), el("th", { rowspan: "2", class: "n", text: "Situations" })],
-          el("th", { rowspan: "2", class: "n pre", text: "Chapitre" }));
-        var entete2 = el("tr", null, ch.themes.map(function () { return [el("th", { class: "n pre", text: "QCM N1" }), el("th", { class: "n", text: "QCM N2" }), el("th", { class: "n", text: "Mini-cas" })]; }));
-        var corps = el("tbody", null, liste.map(function (e) {
-          var r = e.res[k];
-          return el("tr", { class: "ligne-eleve", tabindex: "0", onclick: function () { ouvrirFiche(e.code); }, onkeydown: function (ev) { if (ev.key === "Enter") { ouvrirFiche(e.code); } } },
-            el("td", null, nomCellule(e)), el("td", { class: "n pre" }, pill(r.cartes)),
-            r.themes.map(function (t) { return [el("td", { class: "n pre" }, pill(t.n1)), el("td", { class: "n" }, pill(t.n2)), el("td", { class: "n" }, pill(t.cas))]; }),
-            ch.themes.length ? null : [el("td", { class: "n pre" }, pill(r.qcm)), el("td", { class: "n" }, pill(r.cas))],
-            el("td", { class: "n pre" }, el("strong", { text: r.pct + " %" })));
-        }));
-        if (avecMoyenne && liste.length) {
-          var moy = function (f) { var x = f(liste[0].res[k]); return Math.round(liste.reduce(function (s, e) { return s + f(e.res[k])[0]; }, 0) / liste.length) + "/" + x[1]; };
-          corps.appendChild(el("tr", { class: "moy" }, el("td", { text: "Moyenne de la classe" }), el("td", { class: "n pre", text: moy(function (r) { return r.cartes; }) }),
-            ch.themes.map(function (t, ti) { return [el("td", { class: "n pre", text: moy(function (r) { return r.themes[ti].n1; }) }), el("td", { class: "n", text: moy(function (r) { return r.themes[ti].n2; }) }), el("td", { class: "n", text: moy(function (r) { return r.themes[ti].cas; }) })]; }),
-            ch.themes.length ? null : [el("td", { class: "n pre", text: moy(function (r) { return r.qcm; }) }), el("td", { class: "n", text: moy(function (r) { return r.cas; }) })],
-            el("td", { class: "n pre", text: Math.floor(liste.reduce(function (s, e) { return s + e.res[k].pct; }, 0) / liste.length) + " %" })));
+      var c = ch.c, k = chapitres.indexOf(ch);
+      var page = el("div", { style: teinte(ch) });
+      zone.appendChild(page);
+      page.appendChild(el("div", { class: "p-bandeau" }, el("span", { class: "num", text: String(c.id) }),
+        el("div", null, el("h2", { text: c.titre }), el("p", { text: ch.ouvert ? "Les mêmes chiffres que sur les écrans des élèves. Cliquez sur un élève pour ouvrir sa fiche." : "Chapitre en cours en classe : l’entraînement n’est pas encore ouvert aux élèves." }))));
+
+      page.appendChild(el("h3", { class: "p-section", text: "Progression de la classe" }));
+      if (!ch.ouvert) {
+        page.appendChild(el("div", { class: "p-ferme", text: "🔒 La synthèse, le lexique et l’entraînement s’ouvriront à la fin du chapitre. La progression des élèves apparaîtra alors ici." }));
+      } else {
+        var tableau = function (liste, avecMoyenne) {
+          var entete1 = el("tr", null, el("th", { rowspan: "2", text: "Élève" }), el("th", { rowspan: "2", class: "n pre", text: "Flashcards" }),
+            ch.themes.map(function (t) { return el("th", { colspan: "3", class: "theme", text: t.nom }); }),
+            ch.themes.length ? null : [el("th", { rowspan: "2", class: "n pre", text: "QCM" }), el("th", { rowspan: "2", class: "n", text: "Situations" })],
+            el("th", { rowspan: "2", class: "n pre", text: "Chapitre" }));
+          var entete2 = el("tr", null, ch.themes.map(function () { return [el("th", { class: "n pre", text: "QCM N1" }), el("th", { class: "n", text: "QCM N2" }), el("th", { class: "n", text: "Mini-cas" })]; }));
+          var corps = el("tbody", null, liste.map(function (e) {
+            var r = e.res[k];
+            return el("tr", cliquable(e),
+              el("td", null, nomCellule(e)), el("td", { class: "n pre" }, pill(r.cartes)),
+              r.themes.map(function (t) { return [el("td", { class: "n pre" }, pill(t.n1)), el("td", { class: "n" }, pill(t.n2)), el("td", { class: "n" }, pill(t.cas))]; }),
+              ch.themes.length ? null : [el("td", { class: "n pre" }, pill(r.qcm)), el("td", { class: "n" }, pill(r.cas))],
+              el("td", { class: "n pre" }, el("strong", { text: r.pct + " %" })));
+          }));
+          if (avecMoyenne && liste.length) {
+            var moy = function (f) { var x = f(liste[0].res[k]); return Math.round(liste.reduce(function (s, e) { return s + f(e.res[k])[0]; }, 0) / liste.length) + "/" + x[1]; };
+            corps.appendChild(el("tr", { class: "moy" }, el("td", { text: "Moyenne de la classe" }), el("td", { class: "n pre", text: moy(function (r) { return r.cartes; }) }),
+              ch.themes.map(function (t, ti) { return [el("td", { class: "n pre", text: moy(function (r) { return r.themes[ti].n1; }) }), el("td", { class: "n", text: moy(function (r) { return r.themes[ti].n2; }) }), el("td", { class: "n", text: moy(function (r) { return r.themes[ti].cas; }) })]; }),
+              ch.themes.length ? null : [el("td", { class: "n pre", text: moy(function (r) { return r.qcm; }) }), el("td", { class: "n", text: moy(function (r) { return r.cas; }) })],
+              el("td", { class: "n pre", text: Math.floor(liste.reduce(function (s, e) { return s + e.res[k].pct; }, 0) / liste.length) + " %" })));
+          }
+          return el("div", { class: "p-carte" }, el("div", { class: "p-scroll" }, el("table", { class: "p-tab p-det" }, el("thead", null, entete1, entete2), corps)));
+        };
+        page.appendChild(tableau(trier(classe), true));
+        page.appendChild(el("div", { class: "p-legende" },
+          el("span", null, el("i", { style: "background:var(--ko-soft)" }), "rien de validé"),
+          el("span", null, el("i", { style: "background:var(--sun-soft)" }), "commencé"),
+          el("span", null, el("i", { style: "background:var(--ok-soft)" }), "tout validé"),
+          el("span", { text: "N1 : niveau 1 · Je connais. N2 : niveau 2 · Je réfléchis. Mini-cas : validé quand ses questions sont toutes justes." })));
+        if (autres.length) {
+          page.appendChild(el("p", { class: "p-aide", style: "margin-top:-10px", text: "Autres comptes (tests, invités), hors moyenne :" }));
+          page.appendChild(tableau(trier(autres), false));
         }
-        return el("div", { class: "p-carte" }, el("div", { class: "p-scroll" }, el("table", { class: "p-tab p-det" }, el("thead", null, entete1, entete2), corps)));
       }
-      zone.appendChild(tableau(trier(classe), true));
-      zone.appendChild(el("div", { class: "p-legende" },
-        el("span", null, el("i", { style: "background:var(--ko-soft)" }), "rien de validé"),
-        el("span", null, el("i", { style: "background:var(--sun-soft)" }), "commencé"),
-        el("span", null, el("i", { style: "background:var(--ok-soft)" }), "tout validé"),
-        el("span", { text: "N1 : niveau 1 · Je connais. N2 : niveau 2 · Je réfléchis. Mini-cas : validé quand ses questions sont toutes justes." })));
-      if (autres.length) {
-        zone.appendChild(el("h3", { class: "p-titre-autres", text: "Autres comptes (tests, invités)" }));
-        zone.appendChild(tableau(trier(autres), false));
-      }
+      /* Plus tard : le QCM évalué du chapitre viendra ici, avant les jeux. */
+      (c.jeux || []).forEach(function (j) { sectionJeu(j.id, j.titre).forEach(function (n) { page.appendChild(n); }); });
     }
 
-    function titreJeu(id) {
-      var titre = id;
-      (window.SGN.chapitres || []).forEach(function (c) { (c.jeux || []).forEach(function (j) { if (j.id === id) { titre = j.titre + " · chapitre " + c.id; } }); });
-      return titre;
-    }
-    function nomDe(code) { var e = eleves.filter(function (x) { return x.code === code; })[0]; return e ? e.nom : code; }
-    function vueJeux() {
-      var ids = Object.keys(jeux);
-      if (!ids.length) { zone.appendChild(el("div", { class: "p-vide", text: "Aucune partie pour l’instant. Les parties des élèves connectés avec leur code arriveront ici." })); return; }
-      ids.forEach(function (id) {
-        var v = jeux[id], ent = v[0] || [], lignes = v.slice(1).reverse();
-        zone.appendChild(el("h2", { class: "p-h2", text: titreJeu(id) }));
-        zone.appendChild(el("p", { class: "p-aide", text: pluriel(lignes.length, "partie", "parties") + ", la plus récente en haut." }));
-        zone.appendChild(el("div", { class: "p-carte" }, el("div", { class: "p-scroll" }, el("table", { class: "p-tab" },
-          el("thead", null, el("tr", null, ent.map(function (h) { return el("th", { text: h === "Code" ? "Élève" : h }); }))),
-          el("tbody", null, lignes.map(function (l) {
-            var code = l[ent.indexOf("Code")];
-            return el("tr", { class: "ligne-eleve", onclick: function () { ouvrirFiche(code); } }, l.map(function (x, k) {
-              if (ent[k] === "Code") { var e = eleves.filter(function (y) { return y.code === x; })[0]; return el("td", null, e ? nomCellule(e) : String(x)); }
-              return el("td", { text: ent[k] === "Date" ? quand(x) : String(x) });
-            }));
-          }))))));
-      });
-    }
-
-    /* Noms : seulement si la feuille Google ne les donne pas (ancien script) */
+    /* Noms : seulement si ni la feuille Google ni un fichier ne les donnent */
     function blocNoms() {
       var fichier = el("input", { type: "file", accept: ".csv,text/csv", onchange: function () {
         var f = fichier.files[0]; if (!f) { return; }
@@ -608,34 +678,38 @@
           el("span", { class: "jauge" }, el("i", { style: "width:" + (x[1] ? x[0] / x[1] * 100 : 0) + "%;background:" + couleur(p) })),
           el("span", { class: "x", text: x[0] + " / " + x[1] }), el("span", { class: "mot", text: mot || "" }));
       }
-      chapitres.forEach(function (ch, k) {
+      /* Ses parties d'un jeu */
+      function sesParties(j) {
+        var p = parties(j.id), siennes = p.lignes.filter(function (x) { return x.code === e.code; });
+        var cols = p.ent.map(function (h, k) { return k; }).filter(function (k) { return p.ent[k] !== "Code" && p.ent[k] !== "Date"; });
+        return el("div", { class: "p-act" }, el("div", { class: "p-ligne" }, el("span", { class: "t", text: "Jeu · " + j.titre }),
+          el("span", { class: "mot", style: "min-width:0", text: siennes.length ? pluriel(siennes.length, "partie", "parties") : "pas encore joué" })),
+          siennes.length ? el("div", { class: "p-themes" }, siennes.map(function (x) {
+            return el("div", { class: "p-th" }, el("strong", { text: quand(x.date) }), el("div", { class: "soft", style: "font-size:.88rem;margin-top:2px", text: cols.map(function (k) { return p.ent[k] + " : " + x.l[k]; }).join(" · ") }));
+          })) : null);
+      }
+      tous.forEach(function (ch) {
+        var k = chapitres.indexOf(ch), lesJeux = ch.c.jeux || [];
+        if (!ch.ouvert) {
+          zone.appendChild(el("section", { class: "p-fiche", style: teinte(ch) },
+            el("div", { class: "p-fiche-tete" }, el("span", { class: "cadenas", "aria-hidden": "true", style: "font-size:1.6rem", text: "🔒" }),
+              el("div", null, el("h3", { text: "Chapitre " + ch.c.id + " · " + ch.c.titre }), el("p", { text: "En cours en classe : l’entraînement n’est pas encore ouvert." }))),
+            lesJeux.map(sesParties)));
+          return;
+        }
         var r = e.res[k], avecThemes = ch.themes.length > 0;
-        zone.appendChild(el("section", { class: "p-fiche" },
+        zone.appendChild(el("section", { class: "p-fiche", style: teinte(ch) },
           el("div", { class: "p-fiche-tete" }, anneau(r.pct, 58), el("div", null, el("h3", { text: "Chapitre " + ch.c.id + " · " + ch.c.titre }), el("p", { text: "La jauge du chapitre, comme sur son écran" }))),
-          el("div", { class: "p-act" }, ligne("Flashcards", r.cartes, "sues")),
+          el("div", { class: "p-act", style: "border-top:0" }, ligne("Flashcards", r.cartes, "sues")),
           el("div", { class: "p-act" }, ligne("QCM", r.qcm, "validées"), avecThemes ? el("div", { class: "p-themes" }, r.themes.map(function (t) {
             return el("div", { class: "p-th" }, ligne(t.nom, t.qcm),
               el("div", { class: "p-niv" }, el("span", null, "Niveau 1 · Je connais ", el("b", { text: t.n1[0] + " / " + t.n1[1] })), el("span", null, "Niveau 2 · Je réfléchis ", el("b", { text: t.n2[0] + " / " + t.n2[1] }))));
           })) : null),
           el("div", { class: "p-act" }, ligne("Situations", r.cas, "validées"), avecThemes ? el("div", { class: "p-themes" }, r.themes.map(function (t) {
             return el("div", { class: "p-th" }, ligne(t.nom, t.cas, "mini-cas"));
-          })) : null)));
+          })) : null),
+          lesJeux.map(sesParties)));
       });
-
-      /* Ses parties de jeux */
-      var parties = [];
-      Object.keys(jeux).forEach(function (id) {
-        var v = jeux[id], ent = v[0] || [], ic = ent.indexOf("Code"), id2 = ent.indexOf("Date");
-        v.slice(1).forEach(function (l) { if (l[ic] === e.code) { parties.push({ jeu: titreJeu(id), date: l[id2], l: l, ent: ent }); } });
-      });
-      if (parties.length) {
-        parties.sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
-        zone.appendChild(el("section", { class: "p-fiche" }, el("div", { class: "p-fiche-tete" }, el("div", null, el("h3", { text: "Ses parties de jeux" }), el("p", { text: "Les jeux ne comptent pas dans sa jauge." }))),
-          el("ul", { class: "p-jeux-eleve" }, parties.map(function (p) {
-            var details = p.ent.map(function (h, k) { return h === "Code" || h === "Date" ? null : h + " : " + p.l[k]; }).filter(Boolean).join(" · ");
-            return el("li", null, el("strong", { text: p.jeu }), " · " + quand(p.date), el("br"), el("span", { class: "soft", text: details }));
-          }))));
-      }
     }
 
     ecranConnexion();

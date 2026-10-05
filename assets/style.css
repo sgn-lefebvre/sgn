@@ -261,10 +261,13 @@ tbody th { font-weight: 700; }
 
 /* Codes élèves : écran du code et bouton de la barre du haut */
 .code-page { max-width: 560px; margin: 0 auto; text-align: center; }
-.code-card { text-align: left; display: grid; gap: 10px; }
+.code-card { text-align: center; display: grid; gap: 10px; }
+.code-card > .btn { width: 100%; }
 .code-label { font-family: var(--display); font-weight: 800; font-size: 1.2rem; }
-.code-ligne { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
-.code-champ { flex: 1 1 180px; min-width: 0; min-height: 52px; padding: 10px 16px; border: 2px solid var(--line); border-radius: var(--r-md); background: var(--bg); color: var(--ink); font-family: var(--display); font-weight: 800; font-size: 1.4rem; letter-spacing: .12em; text-transform: uppercase; }
+.code-form { display: grid; gap: 4px; }
+.code-ligne { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.code-ligne .btn { width: 100%; }
+.code-champ { width: 100%; min-width: 0; text-align: center; min-height: 52px; padding: 10px 16px; border: 2px solid var(--line); border-radius: var(--r-md); background: var(--bg); color: var(--ink); font-family: var(--display); font-weight: 800; font-size: 1.4rem; letter-spacing: .12em; text-transform: uppercase; }
 .code-champ:focus { border-color: var(--ink); outline: none; }
 .code-erreur { margin: 2px 0 0; min-height: 1.3em; color: var(--ko); font-weight: 700; }
 .code-aide { margin: 0; font-size: .95rem; }
