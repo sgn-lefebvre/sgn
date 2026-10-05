@@ -4,7 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <title>Suivi des élèves · Révision SGN</title>
+  <meta name="theme-color" content="#15231E">
+  <meta name="apple-mobile-web-app-title" content="Suivi SGN">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Suivi SGN · Espace professeur</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 110 110'%3E%3Crect width='110' height='110' rx='24' fill='%2315231E'/%3E%3Cg fill='%23FFF4E4'%3E%3Crect x='20' y='64' width='14' height='24' rx='2'/%3E%3Crect x='40' y='52' width='14' height='36' rx='2'/%3E%3Crect x='60' y='38' width='14' height='50' rx='2'/%3E%3C/g%3E%3Ccircle cx='72' cy='52' r='17' fill='%2315231E' stroke='%23F09080' stroke-width='6'/%3E%3Cline x1='84' y1='64' x2='96' y2='78' stroke='%23F09080' stroke-width='7' stroke-linecap='round'/%3E%3C/svg%3E">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon-prof.png">
   <link rel="stylesheet" href="assets/style.css">
   <script>
     (function () {
@@ -15,47 +21,176 @@
     })();
   </script>
   <style>
-    .suivi { padding-block: 24px 60px; }
-    .suivi h1 { margin-bottom: 6px; }
-    .suivi-form { display: grid; gap: 12px; max-width: 560px; }
+    /* ---------- Page de suivi : en-tête sombre, deux parties (la classe, élève par élève) ---------- */
+    :root { --entete: #15231E; --entete-2: #22352E; --entete-txt: #EEF3EF; --entete-soft: #AFC2BA; --doux: #F4F7F5; --vide: #E3EAE6; }
+    :root[data-theme="dark"] { --entete: #0B1311; --entete-2: #1A2723; --doux: #16211E; --vide: #2D3C37; }
+    body { font-size: 1rem; }
+    .p-entete { background: var(--entete); color: var(--entete-txt); }
+    .p-entete-in { max-width: 1120px; margin: 0 auto; padding: 18px clamp(16px, 4vw, 32px) 0; }
+    .p-marque { display: flex; align-items: center; gap: 14px; padding-bottom: 18px; }
+    .p-marque svg { flex: none; }
+    .p-marque h1 { font-size: 1.6rem; line-height: 1; color: var(--entete-txt); }
+    .p-marque p { margin: 3px 0 0; color: var(--entete-soft); font-size: .9rem; }
+    .p-maj { margin-left: auto; display: flex; align-items: center; gap: 10px; color: var(--entete-soft); font-size: .85rem; }
+    .p-maj[hidden] { display: none; }
+    .btn-clair { border: 1.5px solid #3A4D46; background: transparent; color: var(--entete-txt); border-radius: 12px; padding: 8px 14px; font-weight: 700; font-size: .95rem; }
+    .btn-clair:hover { border-color: var(--entete-txt); }
+    .btn-clair[disabled] { opacity: .6; cursor: progress; }
+    .p-parties { display: flex; gap: 6px; }
+    .p-parties[hidden] { display: none; }
+    .p-partie { border: 0; background: transparent; color: var(--entete-soft); padding: 12px 20px 14px; border-radius: 14px 14px 0 0; font-family: var(--display); font-weight: 700; font-size: 1.1rem; display: flex; align-items: center; gap: 8px; }
+    .p-partie:hover { color: var(--entete-txt); }
+    .p-partie[aria-pressed=true] { background: var(--bg); color: var(--ink); }
+    .p-page { padding-block: 24px 64px; }
+    .p-erreur-maj { color: #F3A090; font-weight: 700; }
+
+    /* Connexion */
+    .suivi-form { display: grid; gap: 12px; max-width: 520px; margin: 10px auto 0; }
+    .suivi-form h2 { font-size: 1.4rem; }
     .mdp-ligne { display: flex; gap: 8px; }
     .mdp-ligne input { flex: 1; min-width: 0; }
-    .oeil { padding: 0 14px; border: 2px solid var(--line); border-radius: var(--r-sm); background: var(--card); color: var(--ink); font: inherit; font-weight: 700; cursor: pointer; }
+    .oeil { padding: 0 14px; border: 2px solid var(--line); border-radius: var(--r-sm); background: var(--card); color: var(--ink); font: inherit; font-weight: 700; }
     .suivi-form input[type=password], .suivi-form input[type=text] { min-height: 48px; padding: 8px 14px; border: 2px solid var(--line); border-radius: var(--r-sm); background: var(--bg); color: var(--ink); font-size: 1.05rem; }
-    .suivi-onglets { display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 16px; }
-    .suivi-onglets button[aria-pressed=true] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-    .tab-classe { width: 100%; border-collapse: collapse; background: var(--card); border-radius: var(--r-md); overflow: hidden; font-size: .95rem; }
-    .tab-classe th, .tab-classe td { padding: 9px 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: middle; }
-    .tab-classe th { background: var(--sun-soft); font-family: var(--display); cursor: pointer; white-space: nowrap; }
-    .tab-classe td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
-    .tab-classe tr.eleve { cursor: pointer; }
-    .tab-classe tr.eleve:hover td { background: var(--bg); }
-    .tab-classe tr.detail td { background: var(--bg); }
-    .pct { display: inline-block; min-width: 3.2em; padding: 1px 8px; border-radius: 99px; font-weight: 700; text-align: right; }
-    .pct.p0 { background: var(--ko-soft); } .pct.p1 { background: var(--sun-soft); } .pct.p2 { background: var(--teal-soft); } .pct.p3 { background: var(--ok-soft); color: var(--ok); }
-    .muet { color: var(--ink-soft); }
-    .det-ch { margin: 6px 0 12px; }
-    .det-ch h4 { font-size: 1rem; margin: 8px 0 4px; }
-    .det-ch table { border-collapse: collapse; font-size: .9rem; }
-    .tab-classe .det-ch td, .tab-classe .det-ch th { padding: 3px 18px 3px 0; text-align: left; background: none; border: 0; cursor: default; font-family: var(--text); }
-    .tab-classe .det-ch th { color: var(--ink-soft); font-weight: 700; }
-    .reprendre li { margin: 6px 0; }
-    .barre-mini { display: inline-block; width: 120px; height: 8px; border-radius: 99px; background: var(--line); vertical-align: middle; margin: 0 8px; overflow: hidden; }
-    .barre-mini i { display: block; height: 100%; background: var(--coral); }
-    .table-scroll { overflow-x: auto; }
-    .info-noms { font-size: .92rem; }
+
+    /* Puces de navigation (vue d'ensemble, chapitres, jeux) */
+    .p-sous { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 22px; }
+    .p-puce { border: 2px solid var(--line); background: var(--card); border-radius: 999px; padding: 7px 16px; font-weight: 700; font-size: .95rem; }
+    .p-puce:hover { border-color: var(--ink); }
+    .p-puce[aria-pressed=true] { background: var(--ink); border-color: var(--ink); color: var(--bg); }
+    .p-h2 { font-size: 1.35rem; margin: 0 0 12px; }
+    .p-aide { color: var(--ink-soft); font-size: .88rem; margin: -4px 0 12px; }
+
+    /* Chiffres clés */
+    .p-cles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 28px; }
+    .p-cle { border-radius: 20px; padding: 18px 18px 16px; }
+    .p-cle b { display: block; font-family: var(--display); font-weight: 800; font-size: 2.3rem; line-height: 1; }
+    .p-cle span { display: block; margin-top: 8px; font-weight: 700; font-size: .95rem; }
+    .p-cle small { display: block; color: var(--ink-soft); font-size: .82rem; margin-top: 2px; }
+    .k1 { background: var(--card); box-shadow: var(--shadow); } .k2 { background: var(--teal-soft); } .k3 { background: var(--sun-soft); } .k4 { background: var(--coral-soft); }
+
+    /* Cartes des chapitres */
+    .p-chapitres { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; margin-bottom: 30px; }
+    .p-chap { background: var(--card); border-radius: 20px; padding: 18px; box-shadow: var(--shadow); display: flex; gap: 16px; align-items: center; border: 2px solid transparent; text-align: left; }
+    .p-chap:hover { border-color: var(--ink); }
+    .p-chap h3 { font-family: var(--text); font-size: 1rem; line-height: 1.25; letter-spacing: 0; font-weight: 700; }
+    .p-chap p { margin: 4px 0 0; color: var(--ink-soft); font-size: .85rem; }
+    .p-chap .voir { display: inline-block; margin-top: 8px; font-weight: 700; font-size: .85rem; }
+    .anneau { flex: none; }
+    .anneau text { font-family: var(--display); font-weight: 800; fill: var(--ink); }
+
+    /* Tableaux */
+    .p-carte { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); overflow: hidden; margin-bottom: 14px; }
+    .p-scroll { overflow-x: auto; }
+    .p-tab { border-collapse: collapse; width: 100%; min-width: 0; font-size: .93rem; }
+    .p-tab th, .p-tab td { border: 0; vertical-align: middle; }
+    .p-tab thead th { background: var(--card); font-family: var(--text); }
+    .p-tab th { text-align: left; color: var(--ink-soft); font-weight: 700; font-size: .8rem; padding: 10px 12px; white-space: nowrap; }
+    .p-tab th.tri { cursor: pointer; } .p-tab th.tri:hover { color: var(--ink); }
+    .p-tab td { padding: 9px 12px; border-top: 1px solid var(--line); white-space: nowrap; }
+    .p-tab tr.ligne-eleve { cursor: pointer; }
+    .p-tab tr.ligne-eleve:hover td { background: var(--doux); }
+    .p-tab td:first-child, .p-tab th:first-child { position: sticky; left: 0; background: var(--card); z-index: 1; }
+    .p-tab tr.ligne-eleve:hover td:first-child { background: var(--doux); }
+    .p-nom { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+    .p-nom small { color: var(--ink-soft); font-weight: 400; }
+    .ini { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: .8rem; flex: none; }
+    .i0 { background: var(--coral-soft); color: var(--ko); } .i1 { background: var(--teal-soft); color: var(--ok); } .i2 { background: var(--sun-soft); color: var(--ink); }
+    .p-mini { display: flex; align-items: center; gap: 8px; }
+    .p-mini .b { width: 70px; height: 8px; border-radius: 4px; background: var(--vide); overflow: hidden; }
+    .p-mini .b i { display: block; height: 100%; border-radius: 4px; }
+    .p-mini em { font-style: normal; font-weight: 700; font-size: .85rem; min-width: 38px; }
+    .p-quand { font-size: .82rem; color: var(--ink-soft); }
+    .p-quand.vieux { color: var(--ko); font-weight: 700; }
+    .p-det th.theme { text-align: center; color: var(--ink); font-weight: 700; font-size: .82rem; border-left: 3px solid var(--bg); white-space: normal; min-width: 190px; }
+    .p-det th.n, .p-det td.n { text-align: center; }
+    .p-det td.n { padding: 8px 6px; }
+    .p-det .pre { border-left: 3px solid var(--bg); }
+    .pill { display: inline-block; min-width: 48px; padding: 3px 8px; border-radius: 8px; font-weight: 700; font-size: .85rem; text-align: center; }
+    .pv { background: var(--ok-soft); color: var(--ok); } .pm { background: var(--sun-soft); color: var(--ink); } .pz { background: var(--ko-soft); color: var(--ko); }
+    .p-tab tr.moy td { background: var(--doux); font-weight: 700; border-top: 2px solid var(--line); }
+    .p-legende { display: flex; gap: 14px; flex-wrap: wrap; font-size: .82rem; color: var(--ink-soft); margin: 4px 0 26px; }
+    .p-legende span { display: flex; align-items: center; gap: 6px; }
+    .p-legende i { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+    .p-titre-autres { font-size: 1.1rem; margin: 26px 0 6px; }
+    .p-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+    .p-vide { background: var(--card); border-radius: 20px; padding: 22px; color: var(--ink-soft); }
+
+    /* Élève par élève */
+    .p-cherche { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 18px; flex-wrap: wrap; }
+    .p-champ { position: relative; flex: 1; min-width: 220px; max-width: 380px; }
+    .p-champ input { width: 100%; min-height: 48px; border: 2px solid var(--line); border-radius: 14px; padding: 0 16px; font: inherit; background: var(--card); color: var(--ink); }
+    .p-resultats { position: absolute; left: 0; right: 0; top: 52px; z-index: 5; background: var(--card); border: 2px solid var(--line); border-radius: 14px; padding: 6px; display: grid; gap: 2px; box-shadow: var(--shadow); }
+    .p-resultats[hidden] { display: none; }
+    .p-resultats button { border: 0; background: transparent; text-align: left; padding: 8px 10px; border-radius: 10px; display: flex; align-items: center; gap: 10px; font-weight: 700; }
+    .p-resultats button:hover, .p-resultats button:focus { background: var(--doux); }
+    .p-resultats p { margin: 6px 10px; color: var(--ink-soft); font-size: .9rem; }
+    .p-nav { border: 2px solid var(--line); background: var(--card); border-radius: 12px; padding: 10px 14px; font-weight: 700; min-height: 48px; }
+    .p-nav:hover { border-color: var(--ink); }
+    .p-hero { background: var(--entete); color: var(--entete-txt); border-radius: 22px; padding: 22px; display: flex; align-items: center; gap: 18px; margin-bottom: 18px; flex-wrap: wrap; }
+    .p-hero .ini { width: 64px; height: 64px; font-size: 1.3rem; }
+    .p-hero h2 { font-size: 1.7rem; color: var(--entete-txt); }
+    .p-hero p { margin: 4px 0 0; color: var(--entete-soft); font-size: .9rem; }
+    .p-test { display: inline-block; margin-left: 8px; vertical-align: middle; background: var(--sun); color: #15231E; border-radius: 8px; padding: 2px 8px; font-family: var(--text); font-size: .75rem; font-weight: 700; letter-spacing: 0; }
+    .p-code { margin-left: auto; text-align: right; }
+    .p-code b { display: inline-block; font-family: var(--display); font-size: 1.3rem; letter-spacing: .06em; background: var(--entete-2); padding: 6px 14px; border-radius: 12px; }
+    .p-code small { display: block; color: var(--entete-soft); font-size: .8rem; margin-top: 4px; }
+    .p-fiche { background: var(--card); border-radius: 20px; box-shadow: var(--shadow); padding: 18px 20px; margin-bottom: 16px; }
+    .p-fiche-tete { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; }
+    .p-fiche-tete h3 { font-family: var(--text); font-size: 1.05rem; line-height: 1.25; letter-spacing: 0; font-weight: 700; }
+    .p-fiche-tete p { margin: 2px 0 0; color: var(--ink-soft); font-size: .85rem; }
+    .p-act { border-top: 1px solid var(--line); padding: 12px 0; }
+    .p-ligne { display: flex; align-items: center; gap: 12px; }
+    .p-ligne .t { flex: 1; font-weight: 700; min-width: 0; }
+    .p-ligne .jauge { width: 140px; height: 10px; border-radius: 5px; background: var(--vide); overflow: hidden; flex: none; }
+    .p-ligne .jauge i { display: block; height: 100%; border-radius: 5px; }
+    .p-ligne .x { font-weight: 800; font-family: var(--display); font-size: 1.05rem; min-width: 64px; text-align: right; flex: none; }
+    .p-ligne .mot { color: var(--ink-soft); font-size: .82rem; min-width: 62px; flex: none; }
+    .p-themes { margin: 8px 0 0 4px; display: grid; gap: 6px; }
+    .p-th { background: var(--doux); border-radius: 14px; padding: 10px 14px; }
+    .p-th .p-ligne .t { font-weight: 600; font-size: .95rem; }
+    .p-th .p-ligne .jauge { width: 100px; height: 8px; }
+    .p-niv { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+    .p-niv span { background: var(--card); border: 1.5px solid var(--line); border-radius: 10px; padding: 4px 10px; font-size: .85rem; }
+    .p-niv b { font-family: var(--display); }
+    .p-jeux-eleve li { margin: 4px 0; }
+
+    @media (max-width: 760px) {
+      .p-cles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .p-cle b { font-size: 1.9rem; }
+      .p-maj span { display: none; }
+      .p-partie { padding: 10px 12px 12px; font-size: 1rem; }
+      .p-ligne .jauge { display: none; }
+      .p-code { margin-left: 0; text-align: left; }
+      .p-marque h1 { font-size: 1.35rem; }
+      /* Tableaux : colonne des noms resserrée, pour voir les chiffres à côté */
+      .p-tab .p-nom .ini, .p-tab .p-nom small { display: none; }
+      .p-tab td:first-child, .p-tab th:first-child { white-space: normal; min-width: 110px; max-width: 130px; padding-right: 6px; font-size: .88rem; }
+    }
+    @media (max-width: 420px) {
+      .p-marque p { display: none; }
+      .p-partie svg { display: none; }
+      .p-hero h2 { font-size: 1.35rem; }
+    }
   </style>
 </head>
 <body>
-  <main class="wrap suivi">
-    <h1 class="title">Suivi des élèves</h1>
-    <p class="lead soft">Page réservée au professeur. Elle n’a de lien nulle part sur le site.</p>
-    <div id="zone"></div>
-  </main>
+  <header class="p-entete"><div class="p-entete-in">
+    <div class="p-marque">
+      <svg width="46" height="46" viewBox="0 0 110 110" aria-hidden="true"><rect width="110" height="110" rx="24" fill="#22352E"/><g fill="#FFF4E4"><rect x="20" y="64" width="14" height="24" rx="2"/><rect x="40" y="52" width="14" height="36" rx="2"/><rect x="60" y="38" width="14" height="50" rx="2"/></g><circle cx="72" cy="52" r="17" fill="#22352E" stroke="#F09080" stroke-width="6"/><line x1="84" y1="64" x2="96" y2="78" stroke="#F09080" stroke-width="7" stroke-linecap="round"/></svg>
+      <div><h1>Suivi SGN</h1><p>Espace professeur · M. Lefebvre</p></div>
+      <div class="p-maj" id="maj" hidden><span id="maj-texte"></span><button class="btn-clair" type="button" id="actualiser">↻ Actualiser</button></div>
+    </div>
+    <nav class="p-parties" id="parties" hidden aria-label="Parties du suivi">
+      <button class="p-partie" type="button" data-partie="classe" aria-pressed="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M17.5 14.6c2.3.4 3.6 2 4 4.9"/></svg>La classe</button>
+      <button class="p-partie" type="button" data-partie="eleve" aria-pressed="false"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c.7-4 3.6-6.2 7.5-6.2s6.8 2.2 7.5 6.2"/></svg>Élève par élève</button>
+    </nav>
+  </div></header>
+  <main class="wrap p-page" id="zone"></main>
   <script src="data/config.js"></script>
   <script>
-  /* Page de suivi du professeur. Les données viennent du script Google (codes et progressions, sans noms).
-     Les noms viennent du fichier eleves-codes.csv de l'ordinateur du professeur : ils restent dans ce navigateur. */
+  /* Page de suivi du professeur (aucun lien vers elle sur le site, mot de passe vérifié par le script Google).
+     Deux parties : « La classe » (statistiques) et « Élève par élève » (la fiche d'un élève reprend exactement
+     ce que l'élève voit sur ses écrans : mêmes chiffres, mêmes mots, même ordre). */
   (function () {
     "use strict";
     var CFG = window.SGN.config, ADRESSE = (CFG.comptes || {}).adresse || "";
@@ -66,15 +201,19 @@
       var n = document.createElement(tag), kids = Array.prototype.slice.call(arguments, 2);
       Object.keys(props || {}).forEach(function (k) {
         var v = props[k]; if (v === null || v === undefined || v === false) { return; }
-        if (k === "class") { n.className = v; } else if (k === "text") { n.textContent = v; }
+        if (k === "class") { n.className = v; } else if (k === "text") { n.textContent = v; } else if (k === "html") { n.innerHTML = v; }
         else if (k.slice(0, 2) === "on") { n.addEventListener(k.slice(2), v); } else { n.setAttribute(k, v === true ? "" : v); }
       });
       (function add(l) { l.forEach(function (c) { if (c === null || c === undefined || c === false) { return; } if (Array.isArray(c)) { add(c); } else { n.appendChild(typeof c === "string" ? document.createTextNode(c) : c); } }); })(kids);
       return n;
     }
     function vider(n) { while (n.firstChild) { n.removeChild(n.firstChild); } return n; }
-    /* Noms et groupes : d'abord ceux de la feuille Google (colonnes C et D de l'onglet « Codes »),
-       envoyés seulement après le mot de passe ; sinon ceux d'un fichier ouvert dans ce navigateur. */
+    function pct(a, b) { return b ? Math.floor(a / b * 100) : 0; }
+    function pluriel(n, un, plusieurs) { return n + " " + (n > 1 ? plusieurs : un); }
+
+    /* ---------- Noms et groupes ----------
+       D'abord ceux de la feuille Google (colonnes C et D de l'onglet « Codes »), envoyés seulement après le mot de passe ;
+       sinon ceux d'un fichier eleves-codes.csv ouvert dans ce navigateur. */
     var feuille = null;
     function nomFeuille(t) {
       /* « Nina AMARO » devient « AMARO Nina » : les mots en majuscules (le nom) passent devant. */
@@ -86,24 +225,29 @@
       return nom.concat(prenom, fin).join(" ");
     }
     function lireNoms() {
-      if (feuille) { var n = {}; Object.keys(feuille).forEach(function (c) { if (feuille[c].nom) { n[c] = nomFeuille(feuille[c].nom); } }); return n; }
-      try { return JSON.parse(localStorage.getItem(CLE_NOMS)) || {}; } catch (e) { return {}; }
+      var n = {};
+      try { n = JSON.parse(localStorage.getItem(CLE_NOMS)) || {}; } catch (e) { /* stockage indisponible */ }
+      if (feuille) { Object.keys(feuille).forEach(function (c) { if (feuille[c].nom) { n[c] = nomFeuille(feuille[c].nom); } }); }
+      return n;
     }
-    /* Codes qui ne sont pas des élèves de la classe (colonne « Groupe » = Autre) : tests, amis… */
+    /* Codes qui ne sont pas des élèves de la classe (groupe « Autre ») : tests, amis… */
     function lireAutres() {
-      if (feuille) { return Object.keys(feuille).filter(function (c) { return feuille[c].groupe.toLowerCase() === "autre"; }); }
+      var groupes = feuille ? Object.keys(feuille).filter(function (c) { return feuille[c].groupe; }) : [];
+      if (groupes.length) { return groupes.filter(function (c) { return feuille[c].groupe.toLowerCase() === "autre"; }); }
       try { return JSON.parse(localStorage.getItem(CLE_AUTRES)) || []; } catch (e) { return []; }
     }
-    function pct(a, b) { return b ? Math.floor(a / b * 100) : 0; }
-    function badge(p) { return el("span", { class: "pct p" + (p >= 100 ? 3 : p >= 60 ? 2 : p >= 25 ? 1 : 0), text: p + " %" }); }
+
+    function jours(iso) { if (!iso) { return null; } var d = new Date(iso); return isNaN(d) ? null : Math.floor((Date.now() - d) / 86400000); }
     function quand(iso) {
       if (!iso) { return "jamais"; }
       var d = new Date(iso); if (isNaN(d)) { return "?"; }
-      var j = Math.floor((Date.now() - d) / 86400000);
+      var j = jours(iso);
       return (j <= 0 ? "aujourd’hui" : j === 1 ? "hier" : "il y a " + j + " jours") + ", " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
     }
 
-    /* Les chapitres : chargés depuis la liste de index.html, pour ne rien avoir à mettre à jour ici. */
+    /* ---------- Les chapitres ----------
+       Chargés depuis la liste de index.html, pour ne rien avoir à mettre à jour ici. Pour chaque chapitre, on prépare
+       les mêmes groupes que le site élève : une question de QCM, ou un mini-cas (validé quand toutes ses questions sont justes). */
     var chapitresCharges = null;
     function chargerChapitres() {
       if (chapitresCharges) { return chapitresCharges; }
@@ -112,34 +256,60 @@
         return src.reduce(function (p, s) { return p.then(function () { return new Promise(function (ok, ko) { var x = document.createElement("script"); x.src = s; x.onload = ok; x.onerror = ko; document.body.appendChild(x); }); }); }, Promise.resolve());
       }).then(function () {
         return window.SGN.chapitres.filter(function (c) { return !c.verrouille && c.cartes.length; }).sort(function (a, b) { return a.id - b.id; }).map(function (c) {
-          var sitTheme = [];
-          c.situations.forEach(function (s) { (s.questions || [s]).forEach(function () { sitTheme.push(s.theme); }); });
-          return { c: c, nbSit: sitTheme.length, sitTheme: sitTheme, total: c.cartes.length + c.qcm.length + sitTheme.length,
-            themes: (c.themes || []).map(function (t) { return typeof t === "string" ? t : t.nom; }) };
+          var cas = [], nbQSit = 0;
+          c.situations.forEach(function (s) {
+            var ids = (s.questions || [s]).map(function () { return nbQSit++; });
+            cas.push({ ids: ids, theme: s.theme });
+          });
+          var themes = (c.themes || []).map(function (t, i) {
+            var n = i + 1, q1 = [], q2 = [];
+            c.qcm.forEach(function (q, k) { if (q.theme === n) { (q.niveau === 2 ? q2 : q1).push(k); } });
+            return { nom: typeof t === "string" ? t : t.nom, q1: q1, q2: q2, cas: cas.filter(function (g) { return g.theme === n; }) };
+          });
+          return { c: c, cas: cas, nbQSit: nbQSit, themes: themes, total: c.cartes.length + c.qcm.length + nbQSit };
         });
       });
       chapitresCharges.catch(function () { chapitresCharges = null; });
       return chapitresCharges;
     }
 
-    /* Résumé d'un élève pour un chapitre */
+    /* Ce que l'élève voit pour un chapitre (mêmes calculs que assets/app.js : compte, valides) */
     function resume(ch, l) {
       var c = ch.c;
       if (!l || (l.version || 1) !== (c.version || 1)) { l = { cartes: [], okQcm: [], vuQcm: [], okSit: [], vuSit: [] }; }
       function n(liste, max) { return liste.filter(function (i) { return i < max; }).length; }
-      var r = { cartes: n(l.cartes, c.cartes.length), qcm: n(l.okQcm, c.qcm.length), sit: n(l.okSit, ch.nbSit), maj: l.maj };
-      r.fait = r.cartes + r.qcm + r.sit; r.pct = pct(r.fait, ch.total);
-      r.themes = ch.themes.map(function (nom, i) {
-        var t = i + 1, q1 = [], q2 = [], s = [];
-        c.qcm.forEach(function (q, k) { if (q.theme === t) { (q.niveau === 2 ? q2 : q1).push(k); } });
-        ch.sitTheme.forEach(function (th, k) { if (th === t) { s.push(k); } });
-        function ok(ids, liste) { return ids.filter(function (k) { return liste.indexOf(k) >= 0; }).length; }
-        return { nom: nom, n1: [ok(q1, l.okQcm), q1.length], n2: [ok(q2, l.okQcm), q2.length], sit: [ok(s, l.okSit), s.length] };
+      function qOk(ids) { return ids.filter(function (k) { return l.okQcm.indexOf(k) >= 0; }).length; }
+      function casOk(groupes) { return groupes.filter(function (g) { return g.ids.every(function (i) { return l.okSit.indexOf(i) >= 0; }); }).length; }
+      var r = { cartes: [n(l.cartes, c.cartes.length), c.cartes.length], qcm: [n(l.okQcm, c.qcm.length), c.qcm.length], cas: [casOk(ch.cas), ch.cas.length], maj: l.maj };
+      r.fait = r.cartes[0] + r.qcm[0] + n(l.okSit, ch.nbQSit);
+      r.pct = pct(r.fait, ch.total);
+      r.themes = ch.themes.map(function (t) {
+        var n1 = [qOk(t.q1), t.q1.length], n2 = [qOk(t.q2), t.q2.length];
+        return { nom: t.nom, n1: n1, n2: n2, qcm: [n1[0] + n2[0], n1[1] + n2[1]], cas: [casOk(t.cas), t.cas.length] };
       });
-      r.rates = l.vuQcm.filter(function (k) { return k < c.qcm.length && l.okQcm.indexOf(k) < 0; }).length
-        + l.vuSit.filter(function (k) { return k < ch.nbSit && l.okSit.indexOf(k) < 0; }).length;
       return r;
     }
+
+    /* ---------- Petits dessins ---------- */
+    function couleur(p) { return p >= 100 ? "var(--ok)" : p > 0 ? "var(--sun)" : "var(--vide)"; }
+    function etat(x) { return x[0] === 0 ? "pz" : x[0] >= x[1] ? "pv" : "pm"; }
+    function anneau(p, t) {
+      t = t || 64; var r = t / 2 - 6, L = 2 * Math.PI * r, c = t / 2;
+      return el("span", { class: "anneau", "aria-label": p + " %", html:
+        '<svg width="' + t + '" height="' + t + '" viewBox="0 0 ' + t + ' ' + t + '" aria-hidden="true">' +
+        '<circle cx="' + c + '" cy="' + c + '" r="' + r + '" fill="none" stroke="var(--vide)" stroke-width="8"/>' +
+        '<circle cx="' + c + '" cy="' + c + '" r="' + r + '" fill="none" stroke="' + couleur(p) + '" stroke-width="8" stroke-linecap="round" stroke-dasharray="' + (L * p / 100) + ' ' + L + '" transform="rotate(-90 ' + c + ' ' + c + ')"/>' +
+        '<text x="50%" y="54%" text-anchor="middle" dominant-baseline="middle" font-size="' + (t / 4.4) + '">' + p + '%</text></svg>' });
+    }
+    function initiales(e) {
+      var mots = e.nom === e.code ? [e.code] : e.nom.replace(/\(.*\)/, "").trim().split(/\s+/);
+      var txt = mots.length > 1 ? mots[mots.length - 1].charAt(0) + mots[0].charAt(0) : mots[0].slice(0, 2);
+      return el("span", { class: "ini i" + (e.rang % 3), "aria-hidden": "true", text: txt.toUpperCase() });
+    }
+    function nomCellule(e) {
+      return el("div", { class: "p-nom" }, initiales(e), el("span", { text: e.nom }), e.nom === e.code ? null : el("small", { text: e.code }));
+    }
+    function pill(x) { return el("span", { class: "pill " + etat(x), text: x[0] + "/" + x[1] }); }
 
     /* ---------- Appel au script Google ----------
        Google répond parfois lentement ou de travers (service gratuit), et un téléphone peut couper une demande
@@ -158,23 +328,18 @@
         });
     }
 
-    /* ---------- Écran de connexion ---------- */
+    /* ---------- Connexion et actualisation ---------- */
     var motDePasse = "";   /* gardé en mémoire tant que la page est ouverte, pour « Actualiser » */
-    function ouvrir(mdpTape, erreur, bouton) {
-      erreur.textContent = ""; bouton.disabled = true; bouton.textContent = "Chargement…";
-      var lent = setTimeout(function () { bouton.textContent = "Google met un peu de temps, patientez…"; }, 8000);
-      function patience() { bouton.textContent = "Google met un peu de temps, patientez…"; }
-      function fin(message) { clearTimeout(lent); bouton.disabled = false; bouton.textContent = "Ouvrir le suivi"; erreur.textContent = message; }
+    function charger(mdp, avancer, fin) {
       Promise.all([
         chargerChapitres().catch(function () { throw "chapitres"; }),
-        demander({ action: "suivi", motDePasse: mdpTape }, 3, patience).catch(function () { throw "google"; })
+        demander({ action: "suivi", motDePasse: mdp }, 3, function () { avancer("Google met un peu de temps, patientez…"); }).catch(function () { throw "google"; })
       ]).then(function (res) {
         var d = res[1];
         if (!d.ok) { fin(d.erreur === "trop" ? "Trop d’essais : réessayez dans 10 minutes." : "Mot de passe incorrect."); return; }
-        clearTimeout(lent);
-        motDePasse = mdpTape;
+        motDePasse = mdp;
         feuille = d.eleves || null;
-        try { afficherSuivi(res[0], d); }
+        try { preparer(res[0], d); fin(null); }
         catch (e) { fin("La page de suivi n’a pas pu s’afficher. Rechargez la page et réessayez."); }
       }, function (cause) {
         fin(cause === "chapitres" ? "Les chapitres du site n’ont pas pu être chargés. Vérifiez la connexion internet, puis réessayez."
@@ -192,145 +357,285 @@
       var bouton = el("button", { class: "btn btn-dark", type: "submit", text: "Ouvrir le suivi" });
       zone.appendChild(el("form", { class: "card suivi-form", onsubmit: function (ev) {
         ev.preventDefault();
+        erreur.textContent = ""; bouton.disabled = true; bouton.textContent = "Chargement…";
+        var lent = setTimeout(function () { bouton.textContent = "Google met un peu de temps, patientez…"; }, 8000);
         /* Espaces ajoutés par le clavier du téléphone : retirés. */
-        ouvrir(mdp.value.trim(), erreur, bouton);
-      } }, el("label", { text: "Mot de passe" }), el("div", { class: "mdp-ligne" }, mdp, oeil), bouton, erreur));
+        charger(mdp.value.trim(), function (t) { bouton.textContent = t; }, function (msg) {
+          clearTimeout(lent);
+          if (msg) { bouton.disabled = false; bouton.textContent = "Ouvrir le suivi"; erreur.textContent = msg; }
+        });
+      } }, el("h2", { text: "Bonjour !" }), el("p", { class: "soft", text: "Entrez le mot de passe de votre suivi pour voir la progression de vos élèves." }),
+        el("label", { text: "Mot de passe" }), el("div", { class: "mdp-ligne" }, mdp, oeil), bouton, erreur));
+    }
+    var btnActualiser = document.getElementById("actualiser"), majTexte = document.getElementById("maj-texte");
+    btnActualiser.addEventListener("click", function () {
+      if (!motDePasse) { ecranConnexion(); return; }
+      btnActualiser.disabled = true; btnActualiser.textContent = "Chargement…";
+      charger(motDePasse, function (t) { majTexte.textContent = t; }, function (msg) {
+        btnActualiser.disabled = false; btnActualiser.textContent = "↻ Actualiser";
+        if (msg) { majTexte.textContent = msg; majTexte.className = "p-erreur-maj"; }
+      });
+    });
+
+    /* ---------- État de la page ---------- */
+    var etatPage = { partie: "classe", vue: "ensemble", code: null, tri: "nom" };
+    var chapitres = [], eleves = [], classe = [], autres = [], jeux = {};
+    document.querySelectorAll(".p-partie").forEach(function (b) {
+      b.addEventListener("click", function () { etatPage.partie = b.getAttribute("data-partie"); rendre(); window.scrollTo(0, 0); });
+    });
+
+    function preparer(chs, d) {
+      chapitres = chs; jeux = d.jeux || {};
+      var noms = lireNoms(), listeAutres = lireAutres(), parCode = {};
+      d.codes.forEach(function (code) { parCode[code] = {}; });
+      d.progression.forEach(function (l) { if (parCode[l.code]) { parCode[l.code][l.id] = l; } });
+      eleves = d.codes.map(function (code) {
+        var lignes = parCode[code], res = chapitres.map(function (ch) { return resume(ch, lignes[ch.c.id]); });
+        var fait = res.reduce(function (s, r) { return s + r.fait; }, 0), total = chapitres.reduce(function (s, ch) { return s + ch.total; }, 0);
+        var maj = Object.keys(lignes).map(function (k) { return lignes[k].maj; }).filter(Boolean).sort().pop();
+        return { code: code, nom: noms[code] || code, res: res, pct: pct(fait, total), maj: maj, autre: listeAutres.indexOf(code) >= 0 };
+      });
+      eleves.sort(function (a, b) { return a.nom.localeCompare(b.nom, "fr"); });
+      eleves.forEach(function (e, i) { e.rang = i; });
+      classe = eleves.filter(function (e) { return !e.autre; });
+      autres = eleves.filter(function (e) { return e.autre; });
+      if (!etatPage.code || !eleves.some(function (e) { return e.code === etatPage.code; })) { etatPage.code = (classe[0] || eleves[0] || {}).code || null; }
+      document.getElementById("parties").hidden = false;
+      document.getElementById("maj").hidden = false;
+      majTexte.className = "";
+      majTexte.textContent = "Mis à jour à " + new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+      rendre();
     }
 
-    /* ---------- Noms des élèves (fichier de l'ordinateur, gardé dans ce navigateur seulement) ---------- */
-    function blocNoms(rafraichir) {
-      var noms = lireNoms(), nb = Object.keys(noms).length;
+    function ouvrirFiche(code) { etatPage.partie = "eleve"; etatPage.code = code; rendre(); window.scrollTo(0, 0); }
+    function rendre() {
+      vider(zone);
+      document.querySelectorAll(".p-partie").forEach(function (b) { b.setAttribute("aria-pressed", String(b.getAttribute("data-partie") === etatPage.partie)); });
+      if (etatPage.partie === "eleve") { rendreEleve(); } else { rendreClasse(); }
+    }
+
+    /* ==================== Partie 1 : la classe ==================== */
+    function rendreClasse() {
+      var v = etatPage.vue;
+      zone.appendChild(el("div", { class: "p-sous" },
+        [["ensemble", "Vue d’ensemble"]].concat(chapitres.map(function (ch) { return [ch.c.id, "Chapitre " + ch.c.id]; }), [["jeux", "Jeux"]]).map(function (o) {
+          return el("button", { class: "p-puce", type: "button", "aria-pressed": String(v === o[0]), text: o[1], onclick: function () { etatPage.vue = o[0]; rendre(); } });
+        })));
+      if (v === "jeux") { vueJeux(); }
+      else if (v === "ensemble" || !chapitres.some(function (ch) { return ch.c.id === v; })) { vueEnsemble(); }
+      else { vueChapitre(chapitres.filter(function (ch) { return ch.c.id === v; })[0]); }
+    }
+
+    function vueEnsemble() {
+      var actifs = classe.filter(function (e) { return e.maj; }).length;
+      var inactifs = classe.filter(function (e) { var j = jours(e.maj); return j === null || j > 7; }).length;
+      var moy = classe.length ? Math.floor(classe.reduce(function (s, e) { return s + e.pct; }, 0) / classe.length) : 0;
+      zone.appendChild(el("div", { class: "p-cles" },
+        el("div", { class: "p-cle k1" }, el("b", { text: String(classe.length) }), el("span", { text: "élèves" }), el("small", { text: "dans la classe" })),
+        el("div", { class: "p-cle k2" }, el("b", { text: String(actifs) }), el("span", { text: actifs > 1 ? "ont utilisé leur code" : "a utilisé son code" }), el("small", { text: "au moins une fois" })),
+        el("div", { class: "p-cle k3" }, el("b", { text: moy + " %" }), el("span", { text: "avancement moyen" }), el("small", { text: "de la classe, chapitres ouverts" })),
+        el("div", { class: "p-cle k4" }, el("b", { text: String(inactifs) }), el("span", { text: inactifs > 1 ? "inactifs" : "inactif" }), el("small", { text: "jamais connectés ou plus de 7 jours" }))));
+
+      if (!Object.keys(lireNoms()).length) { zone.appendChild(blocNoms()); }
+
+      zone.appendChild(el("h2", { class: "p-h2", text: "Les chapitres" }));
+      zone.appendChild(el("div", { class: "p-chapitres" }, chapitres.map(function (ch, k) {
+        var m = classe.length ? Math.floor(classe.reduce(function (s, e) { return s + e.res[k].pct; }, 0) / classe.length) : 0;
+        var fini = classe.filter(function (e) { return e.res[k].pct >= 100; }).length;
+        return el("button", { class: "p-chap", type: "button", onclick: function () { etatPage.vue = ch.c.id; rendre(); } }, anneau(m),
+          el("div", null, el("h3", { text: "Chapitre " + ch.c.id + " · " + ch.c.titre }),
+            el("p", { text: "Moyenne de la classe · " + pluriel(fini, "élève", "élèves") + " à 100 %" }), el("span", { class: "voir", text: "Voir le détail →" })));
+      })));
+
+      zone.appendChild(el("h2", { class: "p-h2", text: "Les élèves" }));
+      zone.appendChild(el("p", { class: "p-aide", text: "Cliquez sur un élève pour ouvrir sa fiche. Cliquez sur un titre de colonne pour trier." }));
+      zone.appendChild(tableauEnsemble(classe));
+      if (autres.length) {
+        zone.appendChild(el("h3", { class: "p-titre-autres", text: "Autres comptes (tests, invités)" }));
+        zone.appendChild(el("p", { class: "p-aide", text: "Ils ne comptent pas dans les chiffres de la classe." }));
+        zone.appendChild(tableauEnsemble(autres));
+      }
+      zone.appendChild(el("div", { class: "p-actions" }, el("button", { class: "btn", type: "button", text: "Télécharger le tableau (CSV)", onclick: exporter })));
+    }
+    function trier(liste) {
+      var t = etatPage.tri, l = liste.slice();
+      l.sort(function (a, b) {
+        if (t === "maj") { return String(b.maj || "").localeCompare(String(a.maj || "")); }
+        if (t === "total") { return b.pct - a.pct; }
+        if (typeof t === "number") { return b.res[t].pct - a.res[t].pct; }
+        return a.nom.localeCompare(b.nom, "fr");
+      });
+      return l;
+    }
+    function tableauEnsemble(liste) {
+      function th(cle, texte) { return el("th", { class: "tri", title: "Trier", onclick: function () { etatPage.tri = cle; rendre(); } }, texte + (etatPage.tri === cle ? " ▾" : "")); }
+      return el("div", { class: "p-carte" }, el("div", { class: "p-scroll" }, el("table", { class: "p-tab" },
+        el("thead", null, el("tr", null, th("nom", "Élève"), chapitres.map(function (ch, k) { return th(k, "Chap. " + ch.c.id); }), th("total", "Total"), th("maj", "Dernière activité"))),
+        el("tbody", null, trier(liste).map(function (e) {
+          var j = jours(e.maj);
+          return el("tr", { class: "ligne-eleve", tabindex: "0", onclick: function () { ouvrirFiche(e.code); }, onkeydown: function (ev) { if (ev.key === "Enter") { ouvrirFiche(e.code); } } },
+            el("td", null, nomCellule(e)),
+            e.res.map(function (r) { return el("td", null, el("div", { class: "p-mini" }, el("div", { class: "b" }, el("i", { style: "width:" + r.pct + "%;background:" + couleur(r.pct) })), el("em", { text: r.pct + " %" }))); }),
+            el("td", null, el("strong", { text: e.pct + " %" })),
+            el("td", { class: "p-quand" + (j === null || j > 7 ? " vieux" : ""), text: quand(e.maj) }));
+        })))));
+    }
+    function exporter() {
+      var lignes = [["Élève", "Code", "Groupe"].concat(chapitres.map(function (ch) { return "Chapitre " + ch.c.id + " (%)"; }), ["Total (%)", "Dernière activité"])];
+      eleves.forEach(function (e) { lignes.push([e.nom, e.code, e.autre ? "Autre" : "Élève"].concat(e.res.map(function (r) { return r.pct; }), [e.pct, e.maj || ""])); });
+      var blob = new Blob(["﻿" + lignes.map(function (l) { return l.join(";"); }).join("\n")], { type: "text/csv" });
+      var a = el("a", { href: URL.createObjectURL(blob), download: "suivi-sgn.csv" }); document.body.appendChild(a); a.click(); a.remove();
+    }
+
+    function vueChapitre(ch) {
+      var k = chapitres.indexOf(ch), c = ch.c;
+      zone.appendChild(el("h2", { class: "p-h2", text: "Chapitre " + c.id + " · " + c.titre }));
+      zone.appendChild(el("p", { class: "p-aide", text: "Les mêmes chiffres que sur les écrans des élèves. Cliquez sur un élève pour ouvrir sa fiche." }));
+      function tableau(liste, avecMoyenne) {
+        var entete1 = el("tr", null, el("th", { rowspan: "2", text: "Élève" }), el("th", { rowspan: "2", class: "n pre", text: "Flashcards" }),
+          ch.themes.map(function (t) { return el("th", { colspan: "3", class: "theme", text: t.nom }); }),
+          ch.themes.length ? null : [el("th", { rowspan: "2", class: "n pre", text: "QCM" }), el("th", { rowspan: "2", class: "n", text: "Situations" })],
+          el("th", { rowspan: "2", class: "n pre", text: "Chapitre" }));
+        var entete2 = el("tr", null, ch.themes.map(function () { return [el("th", { class: "n pre", text: "QCM N1" }), el("th", { class: "n", text: "QCM N2" }), el("th", { class: "n", text: "Mini-cas" })]; }));
+        var corps = el("tbody", null, liste.map(function (e) {
+          var r = e.res[k];
+          return el("tr", { class: "ligne-eleve", tabindex: "0", onclick: function () { ouvrirFiche(e.code); }, onkeydown: function (ev) { if (ev.key === "Enter") { ouvrirFiche(e.code); } } },
+            el("td", null, nomCellule(e)), el("td", { class: "n pre" }, pill(r.cartes)),
+            r.themes.map(function (t) { return [el("td", { class: "n pre" }, pill(t.n1)), el("td", { class: "n" }, pill(t.n2)), el("td", { class: "n" }, pill(t.cas))]; }),
+            ch.themes.length ? null : [el("td", { class: "n pre" }, pill(r.qcm)), el("td", { class: "n" }, pill(r.cas))],
+            el("td", { class: "n pre" }, el("strong", { text: r.pct + " %" })));
+        }));
+        if (avecMoyenne && liste.length) {
+          var moy = function (f) { var x = f(liste[0].res[k]); return Math.round(liste.reduce(function (s, e) { return s + f(e.res[k])[0]; }, 0) / liste.length) + "/" + x[1]; };
+          corps.appendChild(el("tr", { class: "moy" }, el("td", { text: "Moyenne de la classe" }), el("td", { class: "n pre", text: moy(function (r) { return r.cartes; }) }),
+            ch.themes.map(function (t, ti) { return [el("td", { class: "n pre", text: moy(function (r) { return r.themes[ti].n1; }) }), el("td", { class: "n", text: moy(function (r) { return r.themes[ti].n2; }) }), el("td", { class: "n", text: moy(function (r) { return r.themes[ti].cas; }) })]; }),
+            ch.themes.length ? null : [el("td", { class: "n pre", text: moy(function (r) { return r.qcm; }) }), el("td", { class: "n", text: moy(function (r) { return r.cas; }) })],
+            el("td", { class: "n pre", text: Math.floor(liste.reduce(function (s, e) { return s + e.res[k].pct; }, 0) / liste.length) + " %" })));
+        }
+        return el("div", { class: "p-carte" }, el("div", { class: "p-scroll" }, el("table", { class: "p-tab p-det" }, el("thead", null, entete1, entete2), corps)));
+      }
+      zone.appendChild(tableau(trier(classe), true));
+      zone.appendChild(el("div", { class: "p-legende" },
+        el("span", null, el("i", { style: "background:var(--ko-soft)" }), "rien de validé"),
+        el("span", null, el("i", { style: "background:var(--sun-soft)" }), "commencé"),
+        el("span", null, el("i", { style: "background:var(--ok-soft)" }), "tout validé"),
+        el("span", { text: "N1 : niveau 1 · Je connais. N2 : niveau 2 · Je réfléchis. Mini-cas : validé quand ses questions sont toutes justes." })));
+      if (autres.length) {
+        zone.appendChild(el("h3", { class: "p-titre-autres", text: "Autres comptes (tests, invités)" }));
+        zone.appendChild(tableau(trier(autres), false));
+      }
+    }
+
+    function titreJeu(id) {
+      var titre = id;
+      (window.SGN.chapitres || []).forEach(function (c) { (c.jeux || []).forEach(function (j) { if (j.id === id) { titre = j.titre + " · chapitre " + c.id; } }); });
+      return titre;
+    }
+    function nomDe(code) { var e = eleves.filter(function (x) { return x.code === code; })[0]; return e ? e.nom : code; }
+    function vueJeux() {
+      var ids = Object.keys(jeux);
+      if (!ids.length) { zone.appendChild(el("div", { class: "p-vide", text: "Aucune partie pour l’instant. Les parties des élèves connectés avec leur code arriveront ici." })); return; }
+      ids.forEach(function (id) {
+        var v = jeux[id], ent = v[0] || [], lignes = v.slice(1).reverse();
+        zone.appendChild(el("h2", { class: "p-h2", text: titreJeu(id) }));
+        zone.appendChild(el("p", { class: "p-aide", text: pluriel(lignes.length, "partie", "parties") + ", la plus récente en haut." }));
+        zone.appendChild(el("div", { class: "p-carte" }, el("div", { class: "p-scroll" }, el("table", { class: "p-tab" },
+          el("thead", null, el("tr", null, ent.map(function (h) { return el("th", { text: h === "Code" ? "Élève" : h }); }))),
+          el("tbody", null, lignes.map(function (l) {
+            var code = l[ent.indexOf("Code")];
+            return el("tr", { class: "ligne-eleve", onclick: function () { ouvrirFiche(code); } }, l.map(function (x, k) {
+              if (ent[k] === "Code") { var e = eleves.filter(function (y) { return y.code === x; })[0]; return el("td", null, e ? nomCellule(e) : String(x)); }
+              return el("td", { text: ent[k] === "Date" ? quand(x) : String(x) });
+            }));
+          }))))));
+      });
+    }
+
+    /* Noms : seulement si la feuille Google ne les donne pas (ancien script) */
+    function blocNoms() {
       var fichier = el("input", { type: "file", accept: ".csv,text/csv", onchange: function () {
         var f = fichier.files[0]; if (!f) { return; }
         f.text().then(function (t) {
-          var res = {}, autres = [];
+          var res = {}, aut = [];
           t.split(/\r?\n/).slice(1).forEach(function (ligne) {
             var p = ligne.split(";"); if (p.length < 3) { return; }
             var code = p[2].trim().toUpperCase(); if (!code) { return; }
             res[code] = (p[0].trim() + " " + p[1].trim()).trim();
-            if (p[3] && p[3].trim().toLowerCase() === "autre") { autres.push(code); }
+            if (p[3] && p[3].trim().toLowerCase() === "autre") { aut.push(code); }
           });
-          try { localStorage.setItem(CLE_NOMS, JSON.stringify(res)); localStorage.setItem(CLE_AUTRES, JSON.stringify(autres)); } catch (e) { /* stockage indisponible */ }
-          rafraichir();
+          try { localStorage.setItem(CLE_NOMS, JSON.stringify(res)); localStorage.setItem(CLE_AUTRES, JSON.stringify(aut)); } catch (e) { /* stockage indisponible */ }
+          btnActualiser.click();
         });
       } });
-      return el("div", { class: "card info-noms" },
-        el("p", { text: nb ? nb + " noms chargés depuis votre fichier (gardés dans ce navigateur, jamais envoyés en ligne)." : "Pour voir les noms à la place des codes, ouvrez votre fichier eleves-codes.csv (dossier sources/eleves de votre ordinateur). Il n’est jamais envoyé en ligne." }),
-        el("label", null, nb ? "Remplacer le fichier : " : "Fichier des noms : ", fichier),
-        nb ? el("p", null, el("button", { class: "link-btn", type: "button", text: "Oublier les noms sur cet ordinateur", onclick: function () { try { localStorage.removeItem(CLE_NOMS); localStorage.removeItem(CLE_AUTRES); } catch (e) {} rafraichir(); } })) : null);
+      return el("div", { class: "p-vide", style: "margin-bottom:26px" },
+        el("p", { text: "Les noms des élèves ne sont pas arrivés de votre feuille Google (colonne C de l’onglet « Codes »). Vous pouvez aussi ouvrir votre fichier eleves-codes.csv : il reste dans ce navigateur." }),
+        el("label", null, "Fichier des noms : ", fichier));
     }
 
-    /* ---------- Suivi ---------- */
-    function afficherSuivi(chapitres, d) {
-      var onglet = "classe", tri = "nom";
-      function rendre() {
-        vider(zone);
-        var noms = lireNoms();
-        var parCode = {};
-        d.codes.forEach(function (code) { parCode[code] = {}; });
-        d.progression.forEach(function (l) { if (parCode[l.code]) { parCode[l.code][l.id] = l; } });
-        var eleves = d.codes.map(function (code) {
-          var lignes = parCode[code], res = chapitres.map(function (ch) { return resume(ch, lignes[ch.c.id]); });
-          var fait = res.reduce(function (s, r) { return s + r.fait; }, 0), total = chapitres.reduce(function (s, ch) { return s + ch.total; }, 0);
-          var maj = Object.keys(lignes).map(function (k) { return lignes[k].maj; }).filter(Boolean).sort().pop();
-          return { code: code, nom: noms[code] || code, res: res, pct: pct(fait, total), maj: maj };
-        });
-        eleves.sort(function (a, b) {
-          if (tri === "nom") { return a.nom.localeCompare(b.nom, "fr"); }
-          if (tri === "maj") { return String(b.maj || "").localeCompare(String(a.maj || "")); }
-          if (tri === "total") { return b.pct - a.pct; }
-          return (b.res[tri] ? b.res[tri].pct : 0) - (a.res[tri] ? a.res[tri].pct : 0);
-        });
-        var listeAutres = lireAutres();
-        var autres = eleves.filter(function (e) { return listeAutres.indexOf(e.code) >= 0; });
-        eleves = eleves.filter(function (e) { return listeAutres.indexOf(e.code) < 0; });
-        var actifs = eleves.filter(function (e) { return e.maj; }).length;
-        var a100 = eleves.filter(function (e) { return e.pct >= 100; }).length;
-        zone.appendChild(el("p", { class: "lead", text: eleves.length + " élèves · " + actifs + (actifs > 1 ? " ont déjà utilisé leur code · " : " a déjà utilisé son code · ") + a100 + " à 100 %" }));
-        zone.appendChild(el("div", { class: "suivi-onglets" },
-          [["classe", "La classe"], ["themes", "Thèmes à reprendre"], ["jeux", "Jeux"]].concat(feuille ? [] : [["noms", "Noms des élèves"]]).map(function (o) {
-            return el("button", { class: "btn", type: "button", "aria-pressed": String(onglet === o[0]), text: o[1], onclick: function () { onglet = o[0]; rendre(); } });
-          }),
-          el("button", { class: "btn", type: "button", text: "Actualiser", onclick: function () {
-            var b = this, err = b.parentNode.querySelector(".code-erreur") || b.parentNode.appendChild(el("p", { class: "code-erreur", role: "alert" }));
-            if (motDePasse) { ouvrir(motDePasse, err, b); } else { ecranConnexion(); }
-          } })));
+    /* ==================== Partie 2 : élève par élève ==================== */
+    function rendreEleve() {
+      var ordre = classe.concat(autres);
+      if (!ordre.length) { zone.appendChild(el("div", { class: "p-vide", text: "Aucun élève pour l’instant." })); return; }
+      var i = Math.max(0, ordre.findIndex(function (e) { return e.code === etatPage.code; })), e = ordre[i];
+      etatPage.code = e.code;
 
-        if (onglet === "noms") { zone.appendChild(blocNoms(rendre)); return; }
-
-        if (onglet === "classe") {
-          function th(cle, texte) { return el("th", { onclick: function () { tri = cle; rendre(); }, title: "Trier" }, texte + (tri === cle ? " ▾" : "")); }
-          function tableau(liste) {
-          var corps = el("tbody");
-          liste.forEach(function (e) {
-            var detail = el("tr", { class: "detail", hidden: true }, el("td", { colspan: String(chapitres.length + 3) }, chapitres.map(function (ch, i) {
-              var r = e.res[i];
-              return el("div", { class: "det-ch" },
-                el("h4", { text: "Chapitre " + ch.c.id + " : " + r.pct + " % · flashcards " + r.cartes + "/" + ch.c.cartes.length + (r.rates ? " · " + r.rates + " question(s) ratée(s) pas encore rattrapée(s)" : "") }),
-                el("table", null, el("tr", null, el("th", { text: "Thème" }), el("th", { text: "QCM niveau 1" }), el("th", { text: "QCM niveau 2" }), el("th", { text: "Situations (questions)" })),
-                  r.themes.map(function (t) { return el("tr", null, el("td", { text: t.nom }), el("td", { text: t.n1[0] + "/" + t.n1[1] }), el("td", { text: t.n2[0] + "/" + t.n2[1] }), el("td", { text: t.sit[0] + "/" + t.sit[1] })); })));
-            })));
-            corps.appendChild(el("tr", { class: "eleve", onclick: function () { detail.hidden = !detail.hidden; } },
-              el("td", null, el("strong", { text: e.nom }), e.nom !== e.code ? el("span", { class: "muet", text: " " + e.code }) : null),
-              e.res.map(function (r) { return el("td", { class: "n" }, badge(r.pct)); }),
-              el("td", { class: "n" }, badge(e.pct)),
-              el("td", { class: e.maj ? "" : "muet", text: quand(e.maj) })));
-            corps.appendChild(detail);
-          });
-          return el("div", { class: "table-scroll" }, el("table", { class: "tab-classe" },
-            el("thead", null, el("tr", null, th("nom", "Élève"), chapitres.map(function (ch, i) { return th(i, "Chap. " + ch.c.id); }), th("total", "Total"), th("maj", "Dernière activité"))), corps));
-          }
-          zone.appendChild(el("p", { class: "soft", text: "Cliquez sur un élève pour voir le détail par thème. Cliquez sur un titre de colonne pour trier." }));
-          zone.appendChild(tableau(eleves));
-          if (autres.length) {
-            zone.appendChild(el("h2", { class: "syn-h3", text: "Autres comptes (tests, invités) — non comptés dans la classe" }));
-            zone.appendChild(tableau(autres));
-          }
-          zone.appendChild(el("p", null, el("button", { class: "btn", type: "button", text: "Télécharger le tableau (CSV)", onclick: function () {
-            var lignes = [["Élève", "Code"].concat(chapitres.map(function (ch) { return "Chapitre " + ch.c.id + " (%)"; }), ["Total (%)", "Dernière activité"])];
-            eleves.forEach(function (e) { lignes.push([e.nom, e.code].concat(e.res.map(function (r) { return r.pct; }), [e.pct, e.maj || ""])); });
-            var blob = new Blob(["﻿" + lignes.map(function (l) { return l.join(";"); }).join("\n")], { type: "text/csv" });
-            var a = el("a", { href: URL.createObjectURL(blob), download: "suivi-revision-sgn.csv" }); document.body.appendChild(a); a.click(); a.remove();
-          } })));
-          return;
-        }
-
-        if (onglet === "themes") {
-          var actifsEl = eleves.filter(function (e) { return e.maj; });
-          zone.appendChild(el("p", { class: "soft", text: "Moyenne des " + actifsEl.length + " élèves qui ont déjà travaillé avec leur code, du thème le moins réussi au mieux réussi." }));
-          var items = [];
-          chapitres.forEach(function (ch, i) {
-            ch.themes.forEach(function (nom, t) {
-              var s = [0, 0, 0], m = [0, 0, 0];
-              actifsEl.forEach(function (e) { var th = e.res[i].themes[t]; s[0] += th.n1[0]; m[0] += th.n1[1]; s[1] += th.n2[0]; m[1] += th.n2[1]; s[2] += th.sit[0]; m[2] += th.sit[1]; });
-              var global = pct(s[0] + s[1] + s[2], m[0] + m[1] + m[2]);
-              items.push({ g: global, n: el("li", null, badge(global), " ", el("strong", { text: "Chap. " + ch.c.id + " · " + nom }),
-                el("span", { class: "muet", text: " — niveau 1 : " + pct(s[0], m[0]) + " %, niveau 2 : " + pct(s[1], m[1]) + " %, situations : " + pct(s[2], m[2]) + " %" })) });
-            });
-          });
-          items.sort(function (a, b) { return a.g - b.g; });
-          zone.appendChild(el("ol", { class: "reprendre" }, items.map(function (x) { return x.n; })));
-          return;
-        }
-
-        if (onglet === "jeux") {
-          var ids = Object.keys(d.jeux || {});
-          if (!ids.length) { zone.appendChild(el("p", { class: "soft", text: "Aucun résultat de jeu pour l’instant. Les jeux branchés sur les codes enverront leurs parties ici." })); return; }
-          ids.forEach(function (id) {
-            var v = d.jeux[id], ent = v[0] || [];
-            /* Titre du jeu : celui de la liste « jeux » du chapitre (même identifiant), sinon l'identifiant. */
-            var titre = id;
-            (window.SGN.chapitres || []).forEach(function (c) { (c.jeux || []).forEach(function (j) { if (j.id === id) { titre = j.titre + " (chapitre " + c.id + ")"; } }); });
-            zone.appendChild(el("h2", { class: "syn-h3", text: "Jeu : " + titre + " · " + (v.length - 1) + " partie" + (v.length - 1 > 1 ? "s" : "") }));
-            zone.appendChild(el("div", { class: "table-scroll" }, el("table", { class: "tab-classe" },
-              el("thead", null, el("tr", null, ent.map(function (h) { return el("th", { text: h === "Code" ? "Élève" : h }); }))),
-              el("tbody", null, v.slice(1).map(function (l) { return el("tr", null, l.map(function (x, k) {
-                return el("td", { text: ent[k] === "Code" ? (noms[x] || x) : ent[k] === "Date" ? quand(x) : String(x) });
-              })); })))));
-          });
-        }
+      var champ = el("input", { type: "search", placeholder: "Chercher un élève (prénom, nom ou code)", "aria-label": "Chercher un élève", autocomplete: "off" });
+      var resultats = el("div", { class: "p-resultats", hidden: true, role: "listbox" });
+      function chercher() {
+        var v = champ.value.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").trim();
+        vider(resultats);
+        if (!v) { resultats.hidden = true; return; }
+        var trouves = ordre.filter(function (x) { return (x.nom + " " + x.code).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").indexOf(v) >= 0; }).slice(0, 8);
+        if (!trouves.length) { resultats.appendChild(el("p", { text: "Aucun élève trouvé." })); }
+        trouves.forEach(function (x) { resultats.appendChild(el("button", { type: "button", role: "option", onclick: function () { ouvrirFiche(x.code); } }, initiales(x), x.nom)); });
+        resultats.hidden = false;
       }
-      rendre();
+      champ.addEventListener("input", chercher);
+      champ.addEventListener("keydown", function (ev) { if (ev.key === "Enter") { var b = resultats.querySelector("button"); if (b) { b.click(); } } });
+      function aller(d) { return function () { ouvrirFiche(ordre[(i + d + ordre.length) % ordre.length].code); }; }
+      zone.appendChild(el("div", { class: "p-cherche" }, el("div", { class: "p-champ" }, champ, resultats),
+        el("button", { class: "p-nav", type: "button", text: "← Précédent", onclick: aller(-1) }),
+        el("button", { class: "p-nav", type: "button", text: "Suivant →", onclick: aller(1) })));
+
+      zone.appendChild(el("section", { class: "p-hero" }, initiales(e),
+        el("div", null, el("h2", null, e.nom, e.autre ? el("span", { class: "p-test", text: "compte de test" }) : null),
+          el("p", { text: "Dernière activité : " + quand(e.maj) + " · avancement total " + e.pct + " %" })),
+        el("div", { class: "p-code" }, el("b", { text: e.code }), el("small", { text: "son code personnel" }))));
+
+      function ligne(titre, x, mot) {
+        var p = pct(x[0], x[1]);
+        return el("div", { class: "p-ligne" }, el("span", { class: "t", text: titre }),
+          el("span", { class: "jauge" }, el("i", { style: "width:" + (x[1] ? x[0] / x[1] * 100 : 0) + "%;background:" + couleur(p) })),
+          el("span", { class: "x", text: x[0] + " / " + x[1] }), el("span", { class: "mot", text: mot || "" }));
+      }
+      chapitres.forEach(function (ch, k) {
+        var r = e.res[k], avecThemes = ch.themes.length > 0;
+        zone.appendChild(el("section", { class: "p-fiche" },
+          el("div", { class: "p-fiche-tete" }, anneau(r.pct, 58), el("div", null, el("h3", { text: "Chapitre " + ch.c.id + " · " + ch.c.titre }), el("p", { text: "La jauge du chapitre, comme sur son écran" }))),
+          el("div", { class: "p-act" }, ligne("Flashcards", r.cartes, "sues")),
+          el("div", { class: "p-act" }, ligne("QCM", r.qcm, "validées"), avecThemes ? el("div", { class: "p-themes" }, r.themes.map(function (t) {
+            return el("div", { class: "p-th" }, ligne(t.nom, t.qcm),
+              el("div", { class: "p-niv" }, el("span", null, "Niveau 1 · Je connais ", el("b", { text: t.n1[0] + " / " + t.n1[1] })), el("span", null, "Niveau 2 · Je réfléchis ", el("b", { text: t.n2[0] + " / " + t.n2[1] }))));
+          })) : null),
+          el("div", { class: "p-act" }, ligne("Situations", r.cas, "validées"), avecThemes ? el("div", { class: "p-themes" }, r.themes.map(function (t) {
+            return el("div", { class: "p-th" }, ligne(t.nom, t.cas, "mini-cas"));
+          })) : null)));
+      });
+
+      /* Ses parties de jeux */
+      var parties = [];
+      Object.keys(jeux).forEach(function (id) {
+        var v = jeux[id], ent = v[0] || [], ic = ent.indexOf("Code"), id2 = ent.indexOf("Date");
+        v.slice(1).forEach(function (l) { if (l[ic] === e.code) { parties.push({ jeu: titreJeu(id), date: l[id2], l: l, ent: ent }); } });
+      });
+      if (parties.length) {
+        parties.sort(function (a, b) { return String(b.date).localeCompare(String(a.date)); });
+        zone.appendChild(el("section", { class: "p-fiche" }, el("div", { class: "p-fiche-tete" }, el("div", null, el("h3", { text: "Ses parties de jeux" }), el("p", { text: "Les jeux ne comptent pas dans sa jauge." }))),
+          el("ul", { class: "p-jeux-eleve" }, parties.map(function (p) {
+            var details = p.ent.map(function (h, k) { return h === "Code" || h === "Date" ? null : h + " : " + p.l[k]; }).filter(Boolean).join(" · ");
+            return el("li", null, el("strong", { text: p.jeu }), " · " + quand(p.date), el("br"), el("span", { class: "soft", text: details }));
+          }))));
+      }
     }
 
     ecranConnexion();
