@@ -192,20 +192,24 @@ Objectif : qu'aucun élève ne tombe sur un problème, et que chaque donnée arr
 3. **Si la feuille Google est ouverte** dans le panneau navigateur (compte du professeur) : vérifier que chaque nom de la colonne C est en face du bon code (comparer avec `sources/eleves/eleves-codes.csv`).
 4. Après le diagnostic : ne laisser aucun serveur de test lancé, `data/config.js` sur le vrai Google.
 5. **Test de charge** (après un changement du script ou des envois, ou sur demande) : `node sources/outils/test-charge.js` envoie 30 connexions et 30 envois en même temps au vrai serveur (code de test du professeur seulement, progression renvoyée telle quelle). Attendu : 0 perdu, et la progression du code de test inchangée. Mesures du 5 octobre 2026 : ancien script, tout arrivé en 2 min 24 s au plus (la moitié du premier coup) ; script version 5 (écriture de la seule ligne qui change + journal), tout arrivé en 1 min 22 s au plus (environ deux tiers du premier coup) ; 0 perte dans les deux cas.
+6. **Diagnostic automatique du matin** : tâche planifiée « diagnostic-quotidien-sgn » de l'application Claude (chaque jour vers 6 h 30 ; si le Mac est fermé, elle part à l'ouverture de l'application). Elle fait les étapes 1 et 2 ci-dessus sans rien corriger ni publier, écrit son rapport dans `sources/rapports/diagnostic-AAAA-MM-JJ.md` (30 derniers gardés) et envoie une notification (« tout est OK » ou « N problème(s) »). Pour la changer : modifier la tâche, pas ce fichier seul.
 
-## Créer quelque chose de nouveau (chapitre, jeu, QCM évalué…) : deux temps
+## Créer quelque chose de nouveau (chapitre, jeu, QCM évalué…) : deux étapes en boucle
 
-Choix du professeur : on crée d'abord, on branche et on teste les données seulement à la fin.
+Façon de travailler du professeur : il demande la création, et tout le reste s'enchaîne sans qu'il ait à demander trente corrections. Chaque étape se fait **en boucle** : faire → vérifier → corriger → revérifier, jusqu'à ce qu'il ne reste rien à corriger.
 
-1. **La création** : construire, montrer, ajuster autant de fois que le professeur le souhaite, et le placer où il veut dans l'appli. Pendant cette étape, ne pas parler de données ni de tests de réseau.
-2. **À la toute fin, une fois en place dans l'appli** : brancher l'envoi des données (feuille Google, page prof), puis tester en détail :
-   - jouer comme un élève, sur le site en ligne, avec un code de test (`sources/eleves/code-professeur.txt`, ou l'élève de test), jamais le code d'un vrai élève, et en largeur téléphone ;
-   - couper et remettre le réseau, fermer l'appli, se déconnecter sans réseau (colis), changer d'appareil ;
-   - vérifier chaque donnée sous le bon code dans la feuille et dans la page prof ;
-   - faire un bilan chiffré et honnête (ce qui est arrivé, ce qui manque, ce qui était réel et ce qui était simulé) ;
-   - donner au professeur un petit test à faire lui-même sur son téléphone (mode avion), puis vérifier dans la feuille que c'est arrivé.
+1. **Création, avec la boucle** : construire, puis vérifier et corriger en boucle AVANT de montrer (pour un chapitre : outil de vérification + relecture stricte par un relecteur neuf, tour après tour, voir « Construire un chapitre » ; pour un jeu ou une page : chaque écran, chaque bouton, en largeur téléphone, en clair et en sombre). Montrer ensuite dans le panneau (aperçu local, rien en ligne). Le professeur ajuste s'il le souhaite ; chaque ajustement repasse dans la boucle. Pendant cette étape, ne pas parler de données.
+2. **Liaison avec les comptes, avec la boucle** : quand le professeur valide, tout brancher (site élève, envoi des données vers la feuille Google, page prof), publier sur son « go publie », puis tester **en boucle jusqu'à zéro erreur**, avec tous les tests : chaque page et chaque question jouée en largeur téléphone, envoi des données avec le code de test, réseau coupé puis remis, appli fermée, déconnexion sans réseau (colis), autre appareil, retour sur la page, chaque donnée vérifiée dans le bon ordre et sous le bon code dans la feuille et dans la page prof. Dans la page prof, vérifier aussi les dates (« aujourd’hui », « hier », « il y a N jours ») avec une activité de la veille au soir : elles se comptent en jours du calendrier, pas en tranches de 24 heures (erreur trouvée par le grand test du 6 octobre 2026). Une erreur trouvée → corrigée → la boucle recommence. À la fin, donner au professeur un petit test à faire sur son téléphone (mode avion) et vérifier dans la feuille que c'est arrivé. **À la sortie de cette étape, tout doit être parfait.**
 
 Ne jamais annoncer une création comme terminée avant la fin de l'étape 2.
+
+**Le grand test final se fait de temps en temps**, pas après chaque création (quand le professeur dit « grand test final »). Il doit trouver **zéro erreur**. S'il en trouve une, c'est que les boucles des étapes 1 et 2 ne sont pas assez efficaces : corriger l'erreur, **améliorer les boucles** (ajouter dans ce fichier la vérification qui manquait), et relancer le grand test.
+
+## Les tests : trois niveaux (la phrase que dit le professeur)
+
+- **« Test rapide »** (5 minutes environ) : site en ligne identique à l'ordinateur, aucune erreur de code, serveur Google qui répond, chaque page principale ouverte en largeur téléphone. Fait de moi-même après chaque petite modification.
+- **« Fais le diagnostic »** (15 à 20 minutes) : voir « Diagnostic ». Fait aussi chaque matin automatiquement. Fait de moi-même après chaque publication importante.
+- **« Grand test final »** (1 à 2 heures, sans se presser ; de temps en temps, sur demande) : tout le diagnostic + test de charge + empreinte du script Google ; toutes les questions de tous les chapitres jouées entièrement, en largeur téléphone, tablette et ordinateur, en clair et en sombre (« J'arrête là », « Refaire pour m'entraîner », mémoire des onglets, bouton retour, bilan) ; le trajet complet des données avec le code de test (hors ligne, page fermée, colis, autre appareil, retour sur la page), dans le bon ordre et sous le bon code dans la feuille ; le jeu joué jusqu'au bout et son résultat dans la feuille ; la page prof (mot de passe gardé dans le panneau par « Rester connecté » ; ne jamais le demander dans la conversation) : chaque onglet, chaque chapitre, chiffres comparés un par un avec la feuille. Rapport final honnête (vérifié, simulé, reste à faire sur téléphone), écrit dans `sources/rapports/` et notification au professeur à la fin.
 
 ## Publier
 

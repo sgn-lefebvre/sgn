@@ -321,7 +321,9 @@
     function quand(iso) {
       if (!iso) { return "jamais"; }
       var d = new Date(iso); if (isNaN(d)) { return "?"; }
-      var j = jours(iso);
+      /* Jours du calendrier (et non tranches de 24 h) : une activité d'hier soir s'affiche « hier », même vue le lendemain midi. */
+      var minuit = function (x) { return new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime(); };
+      var j = Math.round((minuit(new Date()) - minuit(d)) / 86400000);
       return (j <= 0 ? "aujourd’hui" : j === 1 ? "hier" : "il y a " + j + " jours") + ", " + d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
     }
 
