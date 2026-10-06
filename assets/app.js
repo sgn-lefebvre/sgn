@@ -638,7 +638,14 @@
   var NIVEAUX = { 1: "Niveau 1 · Je connais", 2: "Niveau 2 · Je réfléchis" };
   function bonnes(d) { return [].concat(d.r); }
   /* Consigne affichée sous la question, sauf si la question dit déjà quoi cocher. */
+  /* La bonne réponse en toutes lettres (pour le message et la liste « À revoir ») */
+  function texteReponse(d) {
+    if (d.tri) { return d.items.map(function (x) { return x[0] + " → " + d.tri[x[1]]; }).join(" ; "); }
+    return bonnes(d).map(function (x) { return d.c[x]; }).join(" ; ");
+  }
   function consigne(d, multi) {
+    if (d.tri && d.relier) { return "Touche un élément à gauche, puis celui qui va avec à droite. Valide quand tout est relié : c’est validé si tout est juste."; }
+    if (d.tri) { return "Touche une étiquette, puis le bac où elle va. Valide quand tout est rangé : c’est validé si tout est juste."; }
     if (multi) { return "Plusieurs réponses sont justes : coche-les toutes, puis valide."; }
     return /coche/i.test(d.q) ? "" : "Coche la bonne réponse.";
   }
@@ -662,35 +669,200 @@
           el("span", { text: libre ? "Entraînement libre : " + pluriel(file.length - pos, "question restante", "questions restantes") : n + " sur " + groupes.length + (type === "qcm" ? " validées" : " situations validées") }),
           el("button", { class: "link-btn", type: "button", text: "J’arrête là", onclick: fin })), b);
     }
+    /* Après une réponse (QCM, mini-cas ou question à classer) : enregistrement, jauge, message et bouton suivant. */
+    function conclure(f, d, juste, zoneJauge, retourZone, ancre, plusieurs) {
+      var nouvelle = juste && p.ok[type].indexOf(f.id) < 0;
+      ajoute(p.vu[type], f.id); faites++;
+      if (juste) { justes++; serie++; ajoute(p.ok[type], f.id); }
+      else {
+        serie = 0; ratees.push(f.id);
+        /* Entraînement libre : la question ratée revient à la fin, jusqu'à ce qu'elle soit réussie. */
+        if (libre) { file.push({ id: f.id, k: f.k, n: f.n, theme: f.theme }); }
+      }
+      sauver(); pos++;
+      if (surProgression) { surProgression(); }
+      vider(zoneJauge).appendChild(jauge());
+      if (nouvelle && ancre) { plusUn(ancre); }
+      var dansLeCas = f.k + 1 < f.n;
+      var suivant = el("button", { class: "btn btn-dark", type: "button", text: pos >= file.length ? "Voir mon bilan" : dansLeCas ? "Question suivante" : (type === "qcm" ? "Question suivante" : "Situation suivante"), onclick: question });
+      var palier = [3, 5, 10, 15, 20, 30].indexOf(serie) >= 0;
+      retourZone.appendChild(el("div", { class: "feedback " + (juste ? "ok" : "ko") + (juste ? " anim-entree" : "") },
+        palier ? el("span", { class: "serie-badge anim-pop", text: "🔥 " + serie + " d’affilée !" }) : null,
+        el("b", { text: juste ? (libre ? "Bonne réponse" : "Bonne réponse, c’est validé") : (libre ? "Ce n’est pas ça : elle reviendra à la fin" : "Ce n’est pas ça") }),
+        el("span", { text: (juste ? "" : (plusieurs ? "Les bonnes réponses : " : "La bonne réponse : ") + texteReponse(d) + ". ") + d.e })));
+      retourZone.appendChild(el("div", { class: "actions" }, suivant,
+        pos < file.length ? el("button", { class: "btn", type: "button", text: "J’arrête là", onclick: fin }) : null));
+      suivant.focus({ preventScroll: true });
+    }
+    /* Questions à classer ou à relier (champ « tri ») : juste seulement si tout est bien placé.
+       Bacs : l'élève touche une étiquette, puis le bac où elle va (une catégorie peut recevoir plusieurs étiquettes).
+       Relier (« relier: true ») : il touche un élément à gauche, puis celui qui va avec à droite ; un trait les relie. */
+    function choixBacs(d, valider) {
+      var choisie = null, place = {}, fige = false;
+      var racine = el("div", { class: "bacs" });
+      var reserve = el("div", { class: "bacs-reserve", "aria-label": "Étiquettes à ranger" });
+      var bacs = d.tri.map(function (cat, k) {
+        var contenu = el("div", { class: "bac-contenu" });
+        var bac = el("div", { class: "bac", role: "button", tabindex: "0", "aria-label": "Ranger dans : " + cat },
+          el("p", { class: "bac-titre", text: cat }), contenu);
+        bac.addEventListener("click", function () { if (!fige && choisie !== null) { poser(choisie, k); } });
+        bac.addEventListener("keydown", function (ev) { if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); bac.click(); } });
+        return { contenu: contenu };
+      });
+      var etiquettes = melanger(d.items.map(function (x, n) { return n; })).map(function (n) {
+        var b = el("button", { class: "etiquette", type: "button", "aria-pressed": "false" }, el("span", { text: d.items[n][0] }));
+        b.addEventListener("click", function (ev) { ev.stopPropagation(); if (!fige) { choisir(choisie === n ? null : n); } });
+        reserve.appendChild(b);
+        return { n: n, b: b };
+      });
+      function etiquette(n) { return etiquettes.filter(function (x) { return x.n === n; })[0]; }
+      function choisir(n) {
+        choisie = n;
+        etiquettes.forEach(function (x) { x.b.classList.toggle("is-choisie", x.n === n); x.b.setAttribute("aria-pressed", String(x.n === n)); });
+        racine.classList.toggle("en-choix", n !== null);
+      }
+      function poser(n, k) {
+        if (k === null) { delete place[n]; reserve.appendChild(etiquette(n).b); }
+        else { place[n] = k; bacs[k].contenu.appendChild(etiquette(n).b); }
+        choisir(null);
+        reserve.classList.toggle("is-vide", Object.keys(place).length === d.items.length);
+        valider.disabled = Object.keys(place).length < d.items.length;
+      }
+      /* Toucher la réserve y ramène l'étiquette choisie. */
+      reserve.addEventListener("click", function () { if (!fige && choisie !== null && place[choisie] !== undefined) { poser(choisie, null); } });
+      racine.appendChild(el("div", { class: "bacs-grille" + (d.tri.length === 2 ? " deux" : "") }, bacs.map(function (x, k) { return x.contenu.parentNode; })));
+      racine.appendChild(reserve);
+      return {
+        el: racine,
+        premier: etiquettes[0].b,
+        corriger: function () {
+          fige = true; choisir(null);
+          var tout = true;
+          etiquettes.forEach(function (x) {
+            var bon = d.items[x.n][1], ok = place[x.n] === bon;
+            if (!ok) { tout = false; x.b.appendChild(el("span", { class: "tri-correction", text: "→ " + d.tri[bon] })); }
+            x.b.disabled = true;
+            x.b.classList.add(ok ? "is-ok" : "is-ko");
+          });
+          return tout;
+        }
+      };
+    }
+    function choixRelier(d, valider) {
+      var paires = {}, choix = null, fige = false;   /* paires : n° à gauche → n° à droite ; choix : { cote, n } */
+      var COULEURS = ["var(--ch3)", "var(--ch5)", "var(--ch2)", "var(--ch4)", "var(--ch1)", "var(--ch7)", "var(--ch9)", "var(--ch8)"];
+      var svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+      svg.setAttribute("class", "relier-traits"); svg.setAttribute("aria-hidden", "true");
+      function bouton(texte, cote, n) {
+        var b = el("button", { class: "relier-btn", type: "button", "aria-pressed": "false" }, el("span", { text: texte }));
+        b.addEventListener("click", function () { if (!fige) { toucher(cote, n); } });
+        return { n: n, b: b };
+      }
+      var gauche = melanger(d.items.map(function (x, n) { return n; })).map(function (n) { return bouton(d.items[n][0], "g", n); });
+      var droite = melanger(d.tri.map(function (x, k) { return k; })).map(function (k) { return bouton(d.tri[k], "d", k); });
+      var colG = el("div", { class: "relier-col" }, gauche.map(function (x) { return x.b; }));
+      var colD = el("div", { class: "relier-col" }, droite.map(function (x) { return x.b; }));
+      var racine = el("div", { class: "relier" }, colG, el("div", { class: "relier-espace" }), colD);
+      racine.appendChild(svg);
+      function de(liste, n) { return liste.filter(function (x) { return x.n === n; })[0]; }
+      function gaucheDe(k) { var r = null; Object.keys(paires).forEach(function (n) { if (paires[n] === k) { r = Number(n); } }); return r; }
+      function toucher(cote, n) {
+        /* Toucher un élément déjà relié défait son trait. */
+        if (cote === "g" && paires[n] !== undefined) { delete paires[n]; }
+        if (cote === "d" && gaucheDe(n) !== null) { delete paires[gaucheDe(n)]; }
+        if (choix && choix.cote !== cote) {
+          var g = cote === "g" ? n : choix.n, k = cote === "d" ? n : choix.n;
+          paires[g] = k; choix = null;
+        } else { choix = (choix && choix.cote === cote && choix.n === n) ? null : { cote: cote, n: n }; }
+        dessiner();
+        valider.disabled = Object.keys(paires).length < d.items.length;
+      }
+      function dessiner(correction) {
+        while (svg.firstChild) { svg.removeChild(svg.firstChild); }
+        var base = racine.getBoundingClientRect();
+        svg.setAttribute("viewBox", "0 0 " + base.width + " " + base.height);
+        gauche.forEach(function (x, i) {
+          var k = paires[x.n], couleur = COULEURS[i % COULEURS.length];
+          x.b.classList.toggle("is-choisie", !!(choix && choix.cote === "g" && choix.n === x.n));
+          x.b.setAttribute("aria-pressed", String(k !== undefined));
+          x.b.style.borderColor = k !== undefined && !correction ? couleur : "";
+          if (k === undefined) { return; }
+          var cible = de(droite, k);
+          cible.b.style.borderColor = correction ? "" : couleur;
+          var a = x.b.getBoundingClientRect(), b = cible.b.getBoundingClientRect();
+          var trait = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          trait.setAttribute("x1", a.right - base.left); trait.setAttribute("y1", a.top + a.height / 2 - base.top);
+          trait.setAttribute("x2", b.left - base.left); trait.setAttribute("y2", b.top + b.height / 2 - base.top);
+          trait.setAttribute("style", "stroke:" + (correction ? (k === d.items[x.n][1] ? "var(--ok)" : "var(--ko)") : couleur));
+          svg.appendChild(trait);
+        });
+        droite.forEach(function (x) {
+          x.b.classList.toggle("is-choisie", !!(choix && choix.cote === "d" && choix.n === x.n));
+          if (gaucheDe(x.n) === null && !correction) { x.b.style.borderColor = ""; }
+        });
+      }
+      /* Les traits suivent la mise en page (rotation du téléphone, police chargée…). */
+      window.addEventListener("resize", function () { if (racine.isConnected) { dessiner(fige); } });
+      window.requestAnimationFrame(function () { dessiner(); });
+      return {
+        el: racine,
+        premier: gauche[0].b,
+        corriger: function () {
+          fige = true; choix = null;
+          var tout = true;
+          gauche.forEach(function (x) {
+            var bon = d.items[x.n][1], ok = paires[x.n] === bon;
+            if (!ok) { tout = false; x.b.appendChild(el("span", { class: "tri-correction", text: "→ " + d.tri[bon] })); }
+            x.b.classList.add(ok ? "is-ok" : "is-ko");
+            x.b.disabled = true;
+          });
+          droite.forEach(function (x) { x.b.disabled = true; });
+          dessiner(true);
+          return tout;
+        }
+      };
+    }
     function question() {
       vider(cont);
       if (pos >= file.length) { fin(); return; }
-      var f = file[pos], it = D.items[f.id], d = it.d, multi = Array.isArray(d.r), justesIdx = bonnes(d);
-      var ordreChoix = d.c.map(function (x, n) { return n; });
-      if (d.c.length > 2) { ordreChoix = melanger(ordreChoix); }
-      var lettres = ["A", "B", "C", "D", "E", "F"];
+      var f = file[pos], it = D.items[f.id], d = it.d, tri = !!d.tri, multi = !tri && Array.isArray(d.r), justesIdx = tri ? [] : bonnes(d);
       var retourZone = el("div", { "aria-live": "polite" });
-      var liste = el("div", { class: "choices" + (multi ? " multi" : "") });
       var zoneJauge = el("div", null, jauge());
-      var choisis = [];
-      var valider = multi ? el("button", { class: "btn btn-dark", type: "button", text: "Valider", disabled: true, onclick: function () { repondre(choisis); } }) : null;
-      var boutons = ordreChoix.map(function (idx, n) {
-        var b = el("button", { class: "choice", type: "button", "aria-pressed": multi ? "false" : null },
-          el("kbd", { "aria-hidden": "true", text: lettres[n] }), el("span", { text: d.c[idx] }));
-        b.addEventListener("click", function () {
-          if (!multi) { repondre([idx]); return; }
-          var i2 = choisis.indexOf(idx);
-          if (i2 >= 0) { choisis.splice(i2, 1); } else { choisis.push(idx); }
-          b.classList.toggle("is-on", i2 < 0);
-          b.setAttribute("aria-pressed", String(i2 < 0));
-          valider.disabled = choisis.length === 0;
+      var liste, valider = null, boutons = [], premier;
+      if (tri) {
+        valider = el("button", { class: "btn btn-dark", type: "button", text: "Valider", disabled: true, onclick: function () {
+          var juste = blocTri.corriger();
+          var z = valider.parentNode; z.parentNode.removeChild(z);
+          conclure(f, d, juste, zoneJauge, retourZone, juste ? blocTri.el : null, true);
+        } });
+        var blocTri = d.relier ? choixRelier(d, valider) : choixBacs(d, valider);
+        liste = blocTri.el;
+        premier = blocTri.premier;
+      } else {
+        var ordreChoix = d.c.map(function (x, n) { return n; });
+        if (d.c.length > 2) { ordreChoix = melanger(ordreChoix); }
+        var lettres = ["A", "B", "C", "D", "E", "F"];
+        liste = el("div", { class: "choices" + (multi ? " multi" : "") });
+        var choisis = [];
+        if (multi) { valider = el("button", { class: "btn btn-dark", type: "button", text: "Valider", disabled: true, onclick: function () { repondre(choisis); } }); }
+        boutons = ordreChoix.map(function (idx, n) {
+          var b = el("button", { class: "choice", type: "button", "aria-pressed": multi ? "false" : null },
+            el("kbd", { "aria-hidden": "true", text: lettres[n] }), el("span", { text: d.c[idx] }));
+          b.addEventListener("click", function () {
+            if (!multi) { repondre([idx]); return; }
+            var i2 = choisis.indexOf(idx);
+            if (i2 >= 0) { choisis.splice(i2, 1); } else { choisis.push(idx); }
+            b.classList.toggle("is-on", i2 < 0);
+            b.setAttribute("aria-pressed", String(i2 < 0));
+            valider.disabled = choisis.length === 0;
+          });
+          liste.appendChild(b);
+          return { idx: idx, b: b };
         });
-        liste.appendChild(b);
-        return { idx: idx, b: b };
-      });
+        premier = boutons[0].b;
+      }
       function repondre(choix) {
         var juste = choix.length === justesIdx.length && choix.every(function (x) { return justesIdx.indexOf(x) >= 0; });
-        var nouvelle = juste && p.ok[type].indexOf(f.id) < 0;
         boutons.forEach(function (x) {
           x.b.disabled = true;
           x.b.classList.remove("is-on");
@@ -698,31 +870,8 @@
           else if (choix.indexOf(x.idx) >= 0) { x.b.classList.add("is-ko", "anim-secoue"); }
         });
         if (valider) { var z = valider.parentNode; z.parentNode.removeChild(z); }
-        ajoute(p.vu[type], f.id); faites++;
-        if (juste) { justes++; serie++; ajoute(p.ok[type], f.id); }
-        else {
-          serie = 0; ratees.push(f.id);
-          /* Entraînement libre : la question ratée revient à la fin, jusqu'à ce qu'elle soit réussie. */
-          if (libre) { file.push({ id: f.id, k: f.k, n: f.n, theme: f.theme }); }
-        }
-        sauver(); pos++;
-        if (surProgression) { surProgression(); }
-        vider(zoneJauge).appendChild(jauge());
-        if (nouvelle) {
-          var choisi = boutons.filter(function (x) { return choix.indexOf(x.idx) >= 0; })[0];
-          if (choisi) { plusUn(choisi.b); }
-        }
-        var dansLeCas = f.k + 1 < f.n;
-        var suivant = el("button", { class: "btn btn-dark", type: "button", text: pos >= file.length ? "Voir mon bilan" : dansLeCas ? "Question suivante" : (type === "qcm" ? "Question suivante" : "Situation suivante"), onclick: question });
-        var reponse = justesIdx.map(function (x) { return d.c[x]; }).join(" ; ");
-        var palier = [3, 5, 10, 15, 20, 30].indexOf(serie) >= 0;
-        retourZone.appendChild(el("div", { class: "feedback " + (juste ? "ok" : "ko") + (juste ? " anim-entree" : "") },
-          palier ? el("span", { class: "serie-badge anim-pop", text: "🔥 " + serie + " d’affilée !" }) : null,
-          el("b", { text: juste ? (libre ? "Bonne réponse" : "Bonne réponse, c’est validé") : (libre ? "Ce n’est pas ça : elle reviendra à la fin" : "Ce n’est pas ça") }),
-          el("span", { text: (juste ? "" : (multi ? "Les bonnes réponses : " : "La bonne réponse : ") + reponse + ". ") + d.e })));
-        retourZone.appendChild(el("div", { class: "actions" }, suivant,
-          pos < file.length ? el("button", { class: "btn", type: "button", text: "J’arrête là", onclick: fin }) : null));
-        suivant.focus({ preventScroll: true });
+        var choisi = boutons.filter(function (x) { return choix.indexOf(x.idx) >= 0; })[0];
+        conclure(f, d, juste, zoneJauge, retourZone, choisi ? choisi.b : null, multi);
       }
       var etiquettes = [
         d.niveau && NIVEAUX[d.niveau] ? el("span", { class: "pill pill-niveau n" + d.niveau, text: NIVEAUX[d.niveau] }) : null,
@@ -740,7 +889,7 @@
         retourZone));
       /* Dans un mini-cas, on garde le texte à l'écran : on ne remonte qu'au début d'une nouvelle situation. */
       if (f.k === 0) { remonter(cont); }
-      if (faites > 0) { boutons[0].b.focus({ preventScroll: true }); }
+      if (faites > 0 && premier) { premier.focus({ preventScroll: true }); }
     }
     function fin() {
       vider(cont);
@@ -769,7 +918,7 @@
           el("h3", { class: "syn-h3", text: "À revoir" }),
           el("ul", { class: "review" }, ratees.filter(function (x, n2, a) { return a.indexOf(x) === n2; }).map(function (i) {
             var it = D.items[i], d = it.d;
-            return el("li", null, el("b", { text: (it.s ? it.s + " " : "") + d.q }), el("span", { text: "Réponse : " + bonnes(d).map(function (x) { return d.c[x]; }).join(" ; ") + ". " + d.e }));
+            return el("li", null, el("b", { text: (it.s ? it.s + " " : "") + d.q }), el("span", { text: "Réponse : " + texteReponse(d) + ". " + d.e }));
           }))) : null,
         el("div", { class: "actions" },
           !toutFait ? el("button", { class: "btn btn-dark", type: "button", text: "Continuer", onclick: question }) : null,
@@ -844,6 +993,18 @@
         el("div", { class: "t-gauge" }, el("span", { class: "t-count", text: fait + " / " + groupes.length }), barre(fait, groupes.length, "mini")),
         el("a", { class: "btn btn-dark", href: lien, text: texteBouton || (fait === 0 ? "Commencer" : fait === groupes.length ? "Refaire" : "Continuer") }));
     }
+    /* Lignes des thèmes. Si les thèmes ont une « partie », son titre s'affiche au-dessus de ses thèmes (seulement s'il en reste un à afficher). */
+    function lignesThemes(fabrique) {
+      var res = [], partie = null;
+      c.themes.forEach(function (x, i) {
+        var l = fabrique(x, i);
+        if (!l) { return; }
+        if (x.partie && x.partie !== partie) { res.push(el("p", { class: "t-partie", text: x.partie })); }
+        partie = x.partie || null;
+        res.push(l);
+      });
+      return res;
+    }
     function serie(etapes, type, groupes, titre) {
       var parent = etapes[etapes.length - 2];
       zone.setAttribute("data-serie", "1");
@@ -879,7 +1040,7 @@
     }
     else if (type === "qcm") {
       ecran([E, ["QCM", base + "/qcm"]], "QCM : choisis un thème", [
-        c.themes.map(function (x, i) { return ligne(nomDuTheme(x), null, "qcm", duTheme("qcm", i + 1), base + "/qcm/" + (i + 1), "Choisir"); }),
+        lignesThemes(function (x, i) { return ligne(nomDuTheme(x), null, "qcm", duTheme("qcm", i + 1), base + "/qcm/" + (i + 1), "Choisir"); }),
         ligne("Tout le chapitre mélangé", "Les deux niveaux", "qcm", D.qcm.groupes, base + "/qcm/tout")]);
     }
     else if (type === "situations" && chemin[1] === "tout") {
@@ -890,7 +1051,7 @@
     }
     else if (type === "situations") {
       ecran([E, ["Situations", base + "/situations"]], "Situations : choisis un thème", [
-        c.themes.map(function (x, i) {
+        lignesThemes(function (x, i) {
           var g = duTheme("situations", i + 1);
           return ligne(nomDuTheme(x), pluriel(g.length, "mini-cas", "mini-cas"), "situations", g, base + "/situations/" + (i + 1));
         }),

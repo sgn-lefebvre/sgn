@@ -358,6 +358,9 @@ tbody th { font-weight: 700; }
 .t-block h3 { font-size: 1.25rem; margin-bottom: 6px; }
 .t-row { display: grid; grid-template-columns: 1.2fr 1fr auto; align-items: center; gap: 10px 24px; padding: 12px 0; border-top: 1px solid var(--line); }
 .t-row:last-child { padding-bottom: 0; }
+/* Titre de partie au-dessus de ses thèmes (chapitres dont les thèmes ont une « partie ») */
+.t-partie { margin: 18px 0 2px; font-family: var(--display); font-weight: 800; font-size: .85rem; letter-spacing: .06em; text-transform: uppercase; color: var(--cc, var(--coral)); }
+.t-block h3 + .t-partie { margin-top: 10px; }
 .t-txt strong { display: block; font-family: var(--display); font-size: 1.05rem; }
 .t-txt .soft { font-size: .92rem; }
 .t-count { display: block; font-family: var(--display); font-weight: 800; margin-bottom: 6px; }
@@ -432,6 +435,30 @@ tbody th { font-weight: 700; }
 .choice[disabled] { cursor: default; }
 .choice.is-ok { background: var(--ok-soft); border-color: var(--ok); }
 .choice.is-ko { background: var(--ko-soft); border-color: var(--ko); }
+/* Questions à classer : des bacs ; l'élève touche une étiquette, puis le bac où elle va */
+.bacs { display: grid; gap: 12px; }
+.bacs-grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.bacs-grille.deux { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.bac { min-height: 92px; padding: 10px; border: 2px dashed var(--line); border-radius: var(--r-md); background: var(--bg); cursor: pointer; transition: border-color .15s, background .15s; }
+.bacs.en-choix .bac { border-color: var(--cc, var(--coral)); background: var(--ccs, var(--sun-soft)); }
+.bac-titre { margin: 0 0 8px; font-family: var(--display); font-weight: 800; font-size: 1rem; }
+.bac-contenu, .bacs-reserve { display: flex; flex-wrap: wrap; gap: 8px; }
+.bacs-reserve { min-height: 58px; padding: 12px; border: 2px solid var(--line); border-radius: var(--r-md); background: var(--card); }
+.bacs-reserve.is-vide { display: none; }
+.etiquette, .relier-btn { font: inherit; font-weight: 600; font-size: .98rem; line-height: 1.3; text-align: left; color: var(--ink); background: var(--card); border: 2px solid var(--line); border-radius: 12px; padding: 9px 12px; transition: transform .12s, border-color .12s, box-shadow .12s; }
+.bac .etiquette { width: 100%; }
+.etiquette.is-choisie, .relier-btn.is-choisie { border-color: var(--ink); box-shadow: 0 0 0 3px var(--cc, var(--coral)); transform: translateY(-2px); }
+.etiquette.is-ok, .relier-btn.is-ok { background: var(--ok-soft); border-color: var(--ok) !important; }
+.etiquette.is-ko, .relier-btn.is-ko { background: var(--ko-soft); border-color: var(--ko) !important; }
+.etiquette:disabled, .relier-btn:disabled { opacity: 1; cursor: default; }
+.tri-correction { display: block; margin-top: 4px; font-weight: 800; color: var(--ko); }
+/* Relier : deux colonnes et des traits de couleur entre les éléments reliés */
+.relier { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 34px minmax(0, 1.5fr); align-items: start; }
+.relier-col { display: grid; gap: 10px; position: relative; z-index: 1; }
+.relier-btn { width: 100%; border-width: 3px; }
+.relier-traits { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.relier-traits line { stroke-width: 3.5; stroke-linecap: round; }
+@media (max-width: 560px) { .relier { grid-template-columns: minmax(0, 1fr) 22px minmax(0, 1.4fr); } .etiquette, .relier-btn { font-size: .92rem; padding: 8px 10px; } }
 .choice.is-ok kbd { background: var(--ok); color: var(--card); }
 .choice.is-ko kbd { background: var(--ko); color: var(--card); }
 /* Questions : étiquette de niveau, plusieurs réponses, mini-cas */
