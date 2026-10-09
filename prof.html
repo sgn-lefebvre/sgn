@@ -295,7 +295,8 @@
     function pluriel(n, un, plusieurs) { return n + " " + (n > 1 ? plusieurs : un); }
 
     /* ---------- Noms et groupes ----------
-       Les noms ne sont jamais en ligne : ils viennent du fichier eleves-codes.csv ouvert une fois dans ce navigateur (gardé ici).
+       Les noms viennent du tableau « Noms » du document Grist (lisible seulement avec la clé du suivi).
+       Secours : le fichier eleves-codes.csv ouvert une fois dans ce navigateur (gardé ici).
        Le groupe (« Élève » ou « Autre ») vient du tableau « Codes » du document Grist. */
     var feuille = null;
     function nomFeuille(t) {
@@ -398,7 +399,7 @@
     function pill(x) { return el("span", { class: "pill " + etat(x), text: x[0] + "/" + x[1] }); }
 
     /* ---------- Lecture du document Grist ----------
-       Quatre tableaux lus en même temps avec la clé du suivi. Une demande qui traîne est abandonnée au bout de 30 secondes,
+       Cinq tableaux lus en même temps avec la clé du suivi. Une demande qui traîne est abandonnée au bout de 30 secondes,
        et on réessaie, 3 fois en tout. */
     function lireTable(table, cle) {
       var ctrl = window.AbortController ? new AbortController() : null;
@@ -428,10 +429,11 @@
       var m = c.maj || date || ""; if (m > e.maj) { e.maj = m; }
     }
     function suivi(cle) {
-      return Promise.all(["Codes", "Progression", "Envois", "Jeux"].map(function (t) { return lireTable(t, cle); })).then(function (t) {
+      return Promise.all(["Codes", "Progression", "Envois", "Jeux", "Noms"].map(function (t) { return lireTable(t, cle); })).then(function (t) {
         if (!t[0].length) { return { ok: false, erreur: "mdp" }; }
         var codes = [], groupes = {}, parCle = {}, jeux = {};
         t[0].forEach(function (r) { var c = String(r.fields.code || ""); if (c) { codes.push(c); groupes[c] = { groupe: String(r.fields.groupe || "") }; } });
+        t[4].forEach(function (r) { var c = String(r.fields.code || "").trim().toUpperCase(); if (groupes[c] && r.fields.nom) { groupes[c].nom = String(r.fields.nom); } });
         t[1].forEach(function (r) { ajouterLigne(parCle, String(r.fields.code), r.fields); });
         t[2].forEach(function (r) { try { JSON.parse(r.fields.donnees || "[]").forEach(function (c) { ajouterLigne(parCle, String(r.fields.code), c, r.fields.date); }); } catch (e) { /* envoi abîmé : ignoré */ } });
         /* Jeux : un tableau par jeu, comme avant (première ligne : Code, Date, puis les rubriques de la partie) */
@@ -787,7 +789,7 @@
         });
       } });
       return el("div", { class: "p-vide", style: "margin-bottom:26px" },
-        el("p", { text: "Les noms des élèves ne sont jamais mis en ligne. Pour les voir ici, ouvrez une fois votre fichier eleves-codes.csv sur cet appareil : il reste seulement dans ce navigateur." }),
+        el("p", { text: "Les noms des élèves n’ont pas été trouvés dans votre document Grist (tableau « Noms »). En attendant, vous pouvez ouvrir votre fichier eleves-codes.csv sur cet appareil : il reste seulement dans ce navigateur." }),
         el("label", null, "Fichier des noms : ", fichier));
     }
 
