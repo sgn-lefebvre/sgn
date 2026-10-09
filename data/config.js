@@ -12,7 +12,7 @@ window.SGN = {
     comptes: { grist: "https://grist.numerique.gouv.fr", document: "qT8SS4r63tmmJkmSeaHBNf",
       /* Remise à zéro, une fois par appareil, de la progression gardée sur l'appareil pour un code ("*" : tous les codes).
          Changer la date pour refaire une remise. Effacer aussi les lignes de ce code dans Grist. */
-      remises: { "PRO-SGN": "2026-10-09", "*": "2026-10-09" } },
+      remises: { "PRO-SGN": "2026-10-09" } },
     prof: "M. Lefebvre",
     classe: "1re STMG",
     matiere: "Sciences de gestion et numérique",
