@@ -248,6 +248,32 @@
   }
   window.addEventListener("online", envoyerJeux);
 
+  /* Remise à zéro (data/config.js, comptes.remises : { "PRO-SGN": "2026-10-09" }, ou "*" pour tous les codes) :
+     une seule fois par appareil, on efface la progression gardée sur l'appareil pour ce code (et ce qui attendait d'être envoyé),
+     pour qu'elle ne revienne pas dans le document Grist. Ce qui est fait ensuite est gardé normalement. */
+  var CLE_REMISES = "sgn-remises-faites";
+  function remiseDue(code) {
+    var r = CFG.remises || {}, v = code && (r[code] ? code + "|" + r[code] : r["*"] ? "*|" + r["*"] : null);
+    if (!v) { return null; }
+    var faites = []; try { faites = JSON.parse(lire(CLE_REMISES) || "[]"); } catch (e) { faites = []; }
+    return faites.indexOf(v) < 0 ? v : null;
+  }
+  function appliquerRemise(code) {
+    var v = remiseDue(code);
+    if (!v) { return false; }
+    ["sgn-progression-v2", "sgn-progression-v1", CLE_ATTENTE, CLE_ENVOYE].forEach(function (k) { ecrire(k, null); });
+    try { ecrire(CLE_COLIS, JSON.stringify(colisEnAttente().filter(function (p) { return p.code !== code; }))); } catch (e) { /* stockage indisponible */ }
+    try { ecrire(CLE_JEUX, JSON.stringify(jeuxEnAttente().filter(function (p) { return p.code !== code; }))); } catch (e) { /* stockage indisponible */ }
+    try {
+      var jeux = [];
+      for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf("sgn-jeu-") === 0) { jeux.push(k); } }
+      jeux.forEach(function (k) { ecrire(k, null); });
+    } catch (e) { /* stockage indisponible */ }
+    var faites = []; try { faites = JSON.parse(lire(CLE_REMISES) || "[]"); } catch (e) { faites = []; }
+    faites.push(v); ecrire(CLE_REMISES, JSON.stringify(faites.slice(-20)));
+    return true;
+  }
+
   function effacerCompte() {
     ecrire(CLE_CODE, null); ecrire(CLE_CHOIX, null); ecrire(CLE_ATTENTE, null); ecrire(CLE_VERIF, null); ecrire(CLE_ENVOYE, null);
   }
@@ -267,12 +293,12 @@
       if (!code) { return Promise.resolve({ ok: false, erreur: "format" }); }
       return appelUnique({ action: "connexion", code: code }, 8000)
         .then(function (r) {
-          if (r.ok) { ecrire(CLE_CODE, code); ecrire(CLE_CHOIX, "code"); ecrire(CLE_VERIF, null); }
+          if (r.ok) { ecrire(CLE_CODE, code); ecrire(CLE_CHOIX, "code"); ecrire(CLE_VERIF, null); r.remise = appliquerRemise(code); }
           return r;
         })
         .catch(function () {
           ecrire(CLE_CODE, code); ecrire(CLE_CHOIX, "code"); ecrire(CLE_VERIF, "1");
-          return { ok: true, provisoire: true, progression: [] };
+          return { ok: true, provisoire: true, progression: [], remise: appliquerRemise(code) };
         });
     },
     /* Récupère la progression en ligne de l'élève connecté (au lancement du site, ou après une connexion provisoire).
@@ -326,6 +352,8 @@
   };
 
   window.SGN_COMPTES = API;
+  /* Avant tout envoi (et avant que le site lise la progression de l'appareil) : remise à zéro éventuelle. */
+  if (API.code()) { appliquerRemise(API.code()); }
   if (API.code()) { setTimeout(envoyerAttente, 2000); }
   if (jeuxEnAttente().length) { setTimeout(envoyerJeux, 2500); }
   if (colisEnAttente().length) { setTimeout(envoyerColis, 3000); }

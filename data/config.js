@@ -9,7 +9,10 @@ window.SGN = {
     adresse: "https://sgn-lefebvre.github.io/sgn/",
     /* Codes élèves : le document Grist du professeur, sur le Grist de l'État (grist.numerique.gouv.fr, via apps.education.fr).
        Voir CLAUDE.md, « Codes élèves ». Vide = pas de codes, le site fonctionne sans. Pour retirer les codes : document: "". */
-    comptes: { grist: "https://grist.numerique.gouv.fr", document: "qT8SS4r63tmmJkmSeaHBNf" },
+    comptes: { grist: "https://grist.numerique.gouv.fr", document: "qT8SS4r63tmmJkmSeaHBNf",
+      /* Remise à zéro, une fois par appareil, de la progression gardée sur l'appareil pour un code ("*" : tous les codes).
+         Changer la date pour refaire une remise. Effacer aussi les lignes de ce code dans Grist. */
+      remises: { "PRO-SGN": "2026-10-09" } },
     prof: "M. Lefebvre",
     classe: "1re STMG",
     matiere: "Sciences de gestion et numérique",

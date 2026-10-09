@@ -1207,6 +1207,8 @@
         window.clearTimeout(patience);
         bouton.disabled = false; bouton.textContent = "Me connecter";
         if (!r.ok) { erreur.textContent = MESSAGES_CODE[r.erreur] || MESSAGES_CODE.serveur; champ.focus(); return; }
+        /* Remise à zéro de ce code (data/config.js) : l'ancienne progression de l'appareil ne repart pas en ligne. */
+        if (r.remise) { store = {}; memoire = { chap: null }; }
         fusionnerProgression(r.progression);
         if (r.provisoire) { synchroniser(); } else { COMPTES.planifierEnvoi(exporterProgression()); }
         location.hash = "#/";
