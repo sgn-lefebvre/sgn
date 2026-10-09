@@ -1187,8 +1187,16 @@
     serveur: "Le service ne répond pas. Réessaie plus tard, ou continue sans code."
   };
   function pageCode() {
-    var champ = el("input", { class: "code-champ", type: "text", inputmode: "text", autocomplete: "off", autocapitalize: "characters", spellcheck: "false",
-      maxlength: "9", placeholder: "K7P-4MX", "aria-label": "Ton code personnel" });
+    /* Le code s'affiche en points (les voisins ne le lisent pas), sans que le navigateur propose de le retenir.
+       Là où les points ne sont pas possibles en champ texte, on prend un champ « mot de passe ». */
+    var points = window.CSS && CSS.supports && CSS.supports("-webkit-text-security", "disc");
+    var champ = el("input", { class: "code-champ code-cache", type: points ? "text" : "password", inputmode: "text", autocomplete: "off", autocapitalize: "characters", spellcheck: "false",
+      "data-lpignore": "true", "data-1p-ignore": "true", maxlength: "9", placeholder: "K7P-4MX", "aria-label": "Ton code personnel" });
+    var voir = el("button", { class: "code-voir", type: "button", "aria-pressed": "false", text: "Afficher", onclick: function () {
+      var cache = champ.classList.toggle("code-cache");
+      if (!points) { champ.type = cache ? "password" : "text"; }
+      voir.textContent = cache ? "Afficher" : "Cacher"; voir.setAttribute("aria-pressed", cache ? "false" : "true"); champ.focus();
+    } });
     var erreur = el("p", { class: "code-erreur", role: "alert" });
     var bouton = el("button", { class: "btn btn-dark", type: "submit", text: "Me connecter" });
     var form = el("form", { class: "code-form", onsubmit: function (ev) {
@@ -1204,7 +1212,7 @@
         location.hash = "#/";
         afficher();
       });
-    } }, el("label", { class: "code-label", text: "Entre ton code personnel :" }), el("div", { class: "code-ligne" }, champ, bouton), erreur);
+    } }, el("label", { class: "code-label", text: "Entre ton code personnel :" }), el("div", { class: "code-ligne" }, el("div", { class: "code-saisie" }, champ, voir), bouton), erreur);
     var dejaVisiteur = COMPTES.choix() === "visiteur";
     return [
       el("section", { class: "code-page" },
@@ -1270,12 +1278,13 @@
     vider(zoneCompte);
     var code = COMPTES.code();
     if (code) {
+      /* Le code n'est jamais affiché (sur un grand écran, les voisins le liraient) : seulement « Connecté ». */
       zoneCompte.appendChild(el("button", { class: "compte-btn", type: "button", title: "Me déconnecter",
-        "aria-label": "Connecté avec le code " + code + ". Me déconnecter",
+        "aria-label": "Connecté. Me déconnecter",
         onclick: function () {
-          if (!window.confirm("Te déconnecter ? Ta progression reste enregistrée en ligne avec ton code " + code + ". Sur cet appareil, elle sera effacée (pratique sur un ordinateur du lycée).")) { return; }
+          if (!window.confirm("Te déconnecter ? Ta progression reste enregistrée en ligne avec ton code. Sur cet appareil, elle sera effacée (pratique sur un ordinateur du lycée).")) { return; }
           deconnexion(false);
-        } }, el("span", { class: "compte-code" }, el("i", { class: "compte-etat", "aria-hidden": "true" }), code),
+        } }, el("span", { class: "compte-code" }, el("i", { class: "compte-etat", "aria-hidden": "true" }), "Connecté"),
         el("span", { class: "compte-sortir" }, el("span", { class: "compte-long", text: "Me déconnecter" }), el("span", { class: "compte-court", text: "Quitter" }))));
       majTemoin();
     } else if (COMPTES.choix()) {

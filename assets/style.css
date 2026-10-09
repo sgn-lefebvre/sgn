@@ -267,6 +267,12 @@ tbody th { font-weight: 700; }
 .code-ligne .btn { width: 100%; }
 .code-champ { width: 100%; min-width: 0; text-align: center; min-height: 52px; padding: 10px 16px; border: 2px solid var(--line); border-radius: var(--r-md); background: var(--bg); color: var(--ink); font-family: var(--display); font-weight: 800; font-size: 1.4rem; letter-spacing: .12em; text-transform: uppercase; }
 .code-champ:focus { border-color: var(--ink); outline: none; }
+.code-saisie { position: relative; }
+.code-saisie .code-champ { padding-right: 92px; padding-left: 16px; }
+.code-cache { -webkit-text-security: disc; }
+.code-cache:placeholder-shown { -webkit-text-security: none; }
+.code-voir { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); min-width: 76px; padding: 8px 10px; border: 2px solid var(--line); border-radius: var(--r-sm); background: var(--card); color: var(--ink); font: inherit; font-weight: 700; font-size: .85rem; cursor: pointer; }
+.code-voir:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 .code-erreur { margin: 2px 0 0; min-height: 1.3em; color: var(--ko); font-weight: 700; }
 .code-aide { margin: 0; font-size: .95rem; }
 .code-ou { margin: 6px 0; text-align: center; font-weight: 700; color: var(--ink-soft); }
@@ -280,8 +286,8 @@ tbody th { font-weight: 700; }
 .alerte-titre { margin: 0 0 10px; font-family: var(--display); font-size: 1.25rem; line-height: 1.25; }
 .alerte p { margin: 0 0 18px; }
 .alerte-actions { display: flex; flex-direction: column; gap: 10px; }
-.compte-code { font-family: var(--display); font-weight: 800; letter-spacing: .06em; }
-.compte-sortir { font-size: .75rem; color: var(--ink-soft); }
+.compte-code { display: inline-flex; align-items: center; font-family: var(--display); font-weight: 800; }
+.compte-sortir { margin-top: 2px; font-size: .8rem; color: var(--ink); text-decoration: underline; text-underline-offset: 2px; }
 .compte:not(:empty) ~ .theme-btn { margin-left: 8px; }
 .compte-court { display: none; }
 @media (max-width: 440px) {
