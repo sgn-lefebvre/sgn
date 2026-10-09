@@ -213,6 +213,7 @@ Ne jamais annoncer une création comme terminée avant la fin de l'étape 2.
 
 ## Publier
 
+- **Version des fichiers** : `index.html` charge `data/config.js`, `assets/style.css`, `assets/comptes.js` et `assets/app.js` avec `?v=AAAA-MM-JJ…` (et `prof.html` charge `data/config.js?v=…`). Après avoir modifié l'un de ces fichiers, changer ce `?v=` (dans les deux pages pour `config.js`) : sinon un téléphone peut garder l'ancienne version jusqu'à 10 minutes (cache de GitHub Pages), voire mélanger ancienne et nouvelle version (erreur trouvée par le grand test du 9 octobre 2026).
 - Avant de publier, laisser le professeur vérifier en ouvrant `index.html`.
 - Ne jamais publier de sa propre initiative. Le professeur publie avec GitHub Desktop (« Commit to main », puis « Push origin »), ou demande explicitement à Claude Code de publier (« go publie ») : seulement dans ce cas, faire le commit et le push.
 - Avant de publier : lancer l'outil de vérification, et vérifier que rien de `sources/` n'est ajouté.
