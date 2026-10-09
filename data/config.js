@@ -6,7 +6,7 @@ window.SGN = {
     titre: "Révision SGN",
     /* Adresse publique du site. Le QR code assets/qr-site.svg pointe vers elle :
        si l’adresse change, il faut refaire le QR code. */
-    adresse: "https://sgn-lefebvre.github.io/sgn/",
+    adresse: "https://sgn-lefebvre.forge.apps.education.fr/",
     /* Codes élèves : le document Grist du professeur, sur le Grist de l'État (grist.numerique.gouv.fr, via apps.education.fr).
        Voir CLAUDE.md, « Codes élèves ». Vide = pas de codes, le site fonctionne sans. Pour retirer les codes : document: "". */
     comptes: { grist: "https://grist.numerique.gouv.fr", document: "qT8SS4r63tmmJkmSeaHBNf",
