@@ -1163,7 +1163,7 @@
   }
 
   /* ---------- Codes élèves : écran du code et bouton de la barre du haut ---------- */
-  /* Récupère la progression en ligne et l'ajoute à celle de l'appareil. Si Google ne répond pas, nouvel essai plus tard. */
+  /* Récupère la progression en ligne et l'ajoute à celle de l'appareil. Si le serveur ne répond pas, nouvel essai plus tard. */
   function synchroniser(essai) {
     essai = essai || 1;
     COMPTES.recuperer().then(function (r) {

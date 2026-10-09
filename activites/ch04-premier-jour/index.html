@@ -453,24 +453,18 @@ function finDuJeu(){
   $('notesfin').innerHTML=notes.map(n=>'<div class="mini">📌 '+n+'</div>').join('');
   aff('fin');confettis();
   try{localStorage.setItem('sgn-jeu-ch04-premier-jour','termine');}catch(e){}
-  const d=new URLSearchParams();
-  d.append('entry.1371614056',P);
-  d.append('entry.1267519749',temps);
-  d.append('entry.2118142894',totErr+' erreur(s) · Réputation '+rep+'/100');
-  d.append('entry.1658200876',err[1]+' erreur(s)');
-  d.append('entry.545268161',err[2]+' erreur(s)');
-  d.append('entry.1821877842',err[3]+' erreur(s)');
-  d.append('entry.972290824',err[4]+' erreur(s)');
-  d.append('entry.126725829',err[5]+' erreur(s)');
-  d.append('entry.184483502',err[6]+' erreur(s)');
-  fetch('https://docs.google.com/forms/d/e/1FAIpQLSffjtA3cseILytwp6N1LsOWGOp4sNJl83RVGLoDUlBXtOpc5Q/formResponse',{method:'POST',mode:'no-cors',body:d})
-   .finally(()=>{$('envoi').textContent='✔ Résultats envoyés au professeur';});
-  /* En plus du Google Form ci-dessus (inchangé) : la partie arrive dans l'onglet « Jeux » de la page de suivi,
-     au nom de l'élève, s'il est connecté avec son code sur le site. */
+  /* Résultat de la partie : seulement dans le suivi du professeur (document Grist), sous le code de l'élève.
+     Aucun prénom n'est envoyé : le prénom tapé au début sert seulement dans le jeu. */
+  const envoi=$('envoi');
   try{
-    if(window.SGN_COMPTES&&SGN_COMPTES.code()){
-      SGN_COMPTES.envoyerJeu('ch04-premier-jour',{'Prénom dans le jeu':P,'Temps':temps,'Réputation':rep+'/100','Erreurs (total)':totErr,
-        'Étape 1':err[1],'Étape 2':err[2],'Étape 3':err[3],'Étape 4':err[4],'Étape 5':err[5],'Bilan final':err[6]});
+    if(window.SGN_COMPTES&&SGN_COMPTES.actif&&SGN_COMPTES.code()){
+      envoi.textContent='Envoi au professeur…';
+      SGN_COMPTES.envoyerJeu('ch04-premier-jour',{'Temps':temps,'Réputation':rep+'/100','Erreurs (total)':totErr,
+        'Étape 1':err[1],'Étape 2':err[2],'Étape 3':err[3],'Étape 4':err[4],'Étape 5':err[5],'Bilan final':err[6]})
+       .then(r=>{envoi.textContent=(r&&r.ok&&!r.enAttente)?'✔ Résultats envoyés au professeur':'✔ Résultats gardés sur ton appareil : ils partiront dès que le réseau revient';},
+             ()=>{envoi.textContent='✔ Résultats gardés sur ton appareil : ils partiront dès que le réseau revient';});
+    }else{
+      envoi.textContent='Pour que ton professeur reçoive tes résultats, connecte-toi avec ton code sur le site avant de jouer.';
     }
   }catch(e){}
 }

@@ -50,7 +50,7 @@
     .p-page { padding-block: 24px 64px; }
     .p-erreur-maj { color: #F3A090; font-weight: 700; }
 
-    /* Connexion : panneau bleu nuit (comme l'affiche d'évaluation du site élève) et carte du mot de passe */
+    /* Connexion : panneau bleu nuit (comme l'affiche d'évaluation du site élève) et carte de la clé du suivi */
     body.en-connexion .p-entete { display: none; }
     body.en-connexion .p-page { padding-top: 20px; }
     .p-login { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); min-height: min(560px, calc(100vh - 60px)); border-radius: 26px; overflow: hidden; box-shadow: var(--shadow); background: var(--card); }
@@ -268,12 +268,15 @@
   <main class="wrap p-page" id="zone"></main>
   <script src="data/config.js"></script>
   <script>
-  /* Page de suivi du professeur (aucun lien vers elle sur le site, mot de passe vérifié par le script Google).
+  /* Page de suivi du professeur (aucun lien vers elle sur le site). Les données viennent du document Grist du professeur
+     (grist.numerique.gouv.fr, via apps.education.fr), lues avec la « clé du suivi » : sans elle, Grist ne renvoie rien.
+     Grist ne contient que des codes : les noms viennent de la liste du professeur, gardée seulement dans ce navigateur.
      Deux parties : « La classe » (statistiques) et « Élève par élève » (la fiche d'un élève reprend exactement
      ce que l'élève voit sur ses écrans : mêmes chiffres, mêmes mots, même ordre). */
   (function () {
     "use strict";
-    var CFG = window.SGN.config, ADRESSE = (CFG.comptes || {}).adresse || "";
+    var CFG = window.SGN.config, COMPTES = CFG.comptes || {};
+    var ADRESSE = COMPTES.document ? (COMPTES.grist || "https://grist.numerique.gouv.fr") + "/api/docs/" + COMPTES.document + "/tables/" : "";
     var zone = document.getElementById("zone");
     var CLE_NOMS = "sgn-prof-noms", CLE_AUTRES = "sgn-prof-autres";
 
@@ -292,8 +295,8 @@
     function pluriel(n, un, plusieurs) { return n + " " + (n > 1 ? plusieurs : un); }
 
     /* ---------- Noms et groupes ----------
-       D'abord ceux de la feuille Google (colonnes C et D de l'onglet « Codes »), envoyés seulement après le mot de passe ;
-       sinon ceux d'un fichier eleves-codes.csv ouvert dans ce navigateur. */
+       Les noms ne sont jamais en ligne : ils viennent du fichier eleves-codes.csv ouvert une fois dans ce navigateur (gardé ici).
+       Le groupe (« Élève » ou « Autre ») vient du tableau « Codes » du document Grist. */
     var feuille = null;
     function nomFeuille(t) {
       /* « Nina AMARO » devient « AMARO Nina » : les mots en majuscules (le nom) passent devant. */
@@ -394,21 +397,61 @@
     }
     function pill(x) { return el("span", { class: "pill " + etat(x), text: x[0] + "/" + x[1] }); }
 
-    /* ---------- Appel au script Google ----------
-       Google répond parfois lentement ou de travers (service gratuit), et un téléphone peut couper une demande
-       quand on change d'application : on abandonne au bout de 30 secondes et on réessaie, 3 fois en tout. */
-    function demander(donnees, essais, patience) {
+    /* ---------- Lecture du document Grist ----------
+       Quatre tableaux lus en même temps avec la clé du suivi. Une demande qui traîne est abandonnée au bout de 30 secondes,
+       et on réessaie, 3 fois en tout. */
+    function lireTable(table, cle) {
       var ctrl = window.AbortController ? new AbortController() : null;
       var minuterie = ctrl ? setTimeout(function () { ctrl.abort(); }, 30000) : null;
-      return fetch(ADRESSE, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(donnees), signal: ctrl ? ctrl.signal : undefined })
-        .then(function (r) { return r.text(); })
-        .then(function (t) { clearTimeout(minuterie); var j = JSON.parse(t); if (!j || typeof j.ok !== "boolean") { throw new Error("réponse"); } return j; })
-        .catch(function (e) {
+      return fetch(ADRESSE + table + "/records?prof_=" + encodeURIComponent(cle), { credentials: "omit", cache: "no-store", signal: ctrl ? ctrl.signal : undefined })
+        .then(function (r) {
           clearTimeout(minuterie);
-          if (essais <= 1) { throw e; }
-          if (patience) { patience(); }
-          return new Promise(function (ok) { setTimeout(ok, 1500); }).then(function () { return demander(donnees, essais - 1, patience); });
+          if (r.status === 403) { return { records: [] }; }   /* mauvaise clé : Grist refuse, il n'y a rien à lire */
+          if (!r.ok) { throw new Error("Grist " + r.status); }
+          return r.json();
+        })
+        .then(function (j) { return (j && j.records) || []; }, function (e) { clearTimeout(minuterie); throw e; });
+    }
+    function liste(v) {
+      if (Array.isArray(v)) { return v.map(Number).filter(function (n) { return n >= 0; }); }
+      try { return liste(JSON.parse(v || "[]")); } catch (e) { return []; }
+    }
+    function union(a, b) { var s = {}; a.concat(b).forEach(function (n) { s[n] = 1; }); return Object.keys(s).map(Number).sort(function (x, y) { return x - y; }); }
+    /* Même addition que le site élève (assets/comptes.js) : une version plus récente d'un chapitre refondu remplace l'ancienne. */
+    function ajouterLigne(parCle, code, c, date) {
+      var id = Number(c && (c.id || c.chapitre)), version = Number(c && c.version) || 1, k = code + "|" + id;
+      if (!(id > 0 && id < 100)) { return; }
+      var e = parCle[k];
+      if (!e || version > e.version) { e = parCle[k] = { code: code, id: id, version: version, maj: "", cartes: [], okQcm: [], vuQcm: [], okSit: [], vuSit: [] }; }
+      if (version < e.version) { return; }
+      ["cartes", "okQcm", "vuQcm", "okSit", "vuSit"].forEach(function (f) { e[f] = union(e[f], liste(c[f])); });
+      var m = c.maj || date || ""; if (m > e.maj) { e.maj = m; }
+    }
+    function suivi(cle) {
+      return Promise.all(["Codes", "Progression", "Envois", "Jeux"].map(function (t) { return lireTable(t, cle); })).then(function (t) {
+        if (!t[0].length) { return { ok: false, erreur: "mdp" }; }
+        var codes = [], groupes = {}, parCle = {}, jeux = {};
+        t[0].forEach(function (r) { var c = String(r.fields.code || ""); if (c) { codes.push(c); groupes[c] = { groupe: String(r.fields.groupe || "") }; } });
+        t[1].forEach(function (r) { ajouterLigne(parCle, String(r.fields.code), r.fields); });
+        t[2].forEach(function (r) { try { JSON.parse(r.fields.donnees || "[]").forEach(function (c) { ajouterLigne(parCle, String(r.fields.code), c, r.fields.date); }); } catch (e) { /* envoi abîmé : ignoré */ } });
+        /* Jeux : un tableau par jeu, comme avant (première ligne : Code, Date, puis les rubriques de la partie) */
+        t[3].forEach(function (r) {
+          var id = String(r.fields.jeu || ""), d = {}; if (!id) { return; }
+          try { d = JSON.parse(r.fields.donnees || "{}") || {}; } catch (e) { d = {}; }
+          var tab = jeux[id] = jeux[id] || [["Code", "Date"]];
+          Object.keys(d).forEach(function (k) { if (tab[0].indexOf(k) < 0) { tab[0].push(k); } });
+          tab.push(tab[0].map(function (k) { return k === "Code" ? r.fields.code : k === "Date" ? r.fields.date : d[k]; }));
         });
+        Object.keys(jeux).forEach(function (id) { var n = jeux[id][0].length; jeux[id].forEach(function (l) { while (l.length < n) { l.push(""); } }); });
+        return { ok: true, codes: codes, progression: Object.keys(parCle).map(function (k) { return parCle[k]; }), jeux: jeux, eleves: groupes };
+      });
+    }
+    function demander(cle, essais, patience) {
+      return suivi(cle).catch(function (e) {
+        if (essais <= 1) { throw e; }
+        if (patience) { patience(); }
+        return new Promise(function (ok) { setTimeout(ok, 1500); }).then(function () { return demander(cle, essais - 1, patience); });
+      });
     }
 
     /* ---------- Connexion et actualisation ---------- */
@@ -416,21 +459,21 @@
     function charger(mdp, avancer, fin) {
       Promise.all([
         chargerChapitres().catch(function () { throw "chapitres"; }),
-        demander({ action: "suivi", motDePasse: mdp }, 3, function () { avancer("Google met un peu de temps, patientez…"); }).catch(function () { throw "google"; })
+        demander(mdp, 3, function () { avancer("Le serveur met un peu de temps, patientez…"); }).catch(function () { throw "serveur"; })
       ]).then(function (res) {
         var d = res[1];
-        if (!d.ok) { fin(d.erreur === "trop" ? "Trop d’essais : réessayez dans 10 minutes." : "Mot de passe incorrect.", d.erreur === "trop" ? "trop" : "mdp"); return; }
+        if (!d.ok) { fin("Clé du suivi incorrecte.", "mdp"); return; }
         motDePasse = mdp;
         feuille = d.eleves || null;
         try { preparer(res[0], d); fin(null); }
         catch (e) { fin("La page de suivi n’a pas pu s’afficher. Rechargez la page et réessayez.", "page"); }
       }, function (cause) {
         fin(cause === "chapitres" ? "Les chapitres du site n’ont pas pu être chargés. Vérifiez la connexion internet, puis réessayez."
-          : "Google n’a pas répondu, même après 3 essais. Vérifiez la connexion internet, puis réessayez.", "reseau");
+          : "Le serveur n’a pas répondu, même après 3 essais. Vérifiez la connexion internet, puis réessayez.", "reseau");
       });
     }
-    /* « Rester connecté sur cet appareil » : le mot de passe est gardé dans ce navigateur (le téléphone du professeur).
-       Un élève qui trouverait l'adresse de la page ne voit toujours rien sans le mot de passe. « Me déconnecter » l'efface. */
+    /* « Rester connecté sur cet appareil » : la clé du suivi est gardée dans ce navigateur (le téléphone du professeur).
+       Un élève qui trouverait l'adresse de la page ne voit toujours rien sans la clé. « Me déconnecter » l'efface. */
     var CLE_MDP = "sgn-prof-mdp";
     function mdpGarde() { try { return localStorage.getItem(CLE_MDP) || ""; } catch (e) { return ""; } }
     function garderMdp(m) { try { if (m) { localStorage.setItem(CLE_MDP, m); } else { localStorage.removeItem(CLE_MDP); } } catch (e) { /* stockage indisponible */ } }
@@ -449,9 +492,9 @@
     function ecranConnexion(message) {
       modeConnexion(true);
       vider(zone);
-      if (!ADRESSE) { zone.appendChild(el("div", { class: "card" }, el("p", { text: "Les codes élèves ne sont pas encore branchés : l’adresse du script Google est vide dans data/config.js (comptes.adresse)." }))); return; }
+      if (!ADRESSE) { zone.appendChild(el("div", { class: "card" }, el("p", { text: "Les codes élèves ne sont pas encore branchés : le document Grist est vide dans data/config.js (comptes.document)." }))); return; }
       var mdp = el("input", { type: "password", autocomplete: "current-password", autocapitalize: "off", autocorrect: "off", spellcheck: "false",
-        placeholder: "Mot de passe du suivi", "aria-label": "Mot de passe du suivi" });
+        placeholder: "Clé du suivi", "aria-label": "Clé du suivi" });
       var oeil = el("button", { class: "oeil", type: "button", "aria-pressed": "false", text: "Afficher",
         onclick: function () { var voir = mdp.type === "password"; mdp.type = voir ? "text" : "password"; oeil.textContent = voir ? "Masquer" : "Afficher"; oeil.setAttribute("aria-pressed", String(voir)); mdp.focus(); } });
       var rester = el("input", { type: "checkbox", id: "rester", checked: true });
@@ -460,7 +503,7 @@
       var form = el("form", { class: "p-login-carte", onsubmit: function (ev) {
         ev.preventDefault();
         erreur.textContent = ""; bouton.disabled = true; bouton.textContent = "Chargement…";
-        var lent = setTimeout(function () { bouton.textContent = "Google met un peu de temps, patientez…"; }, 8000);
+        var lent = setTimeout(function () { bouton.textContent = "Le serveur met un peu de temps, patientez…"; }, 8000);
         /* Espaces ajoutés par le clavier du téléphone : retirés. */
         var tape = mdp.value.trim();
         charger(tape, function (t) { bouton.textContent = t; }, function (msg) {
@@ -468,14 +511,14 @@
           if (msg) { bouton.disabled = false; bouton.textContent = "Ouvrir le suivi →"; erreur.textContent = msg; return; }
           garderMdp(rester.checked ? tape : "");
         });
-      } }, el("h2", { text: "Bon retour !" }), el("p", { class: "soft", text: "Ton mot de passe, une seule fois sur cet appareil." }),
-        el("label", { class: "sr-only", for: "mdp-prof", text: "Mot de passe" }), el("div", { class: "mdp-ligne" }, mdp, oeil),
+      } }, el("h2", { text: "Bon retour !" }), el("p", { class: "soft", text: "Ta clé du suivi, une seule fois sur cet appareil." }),
+        el("label", { class: "sr-only", for: "mdp-prof", text: "Clé du suivi" }), el("div", { class: "mdp-ligne" }, mdp, oeil),
         el("label", { class: "p-rester", for: "rester" }, rester, " Rester connecté sur cet appareil"),
-        bouton, erreur, el("p", { class: "p-login-note", text: "Sans ce mot de passe, personne ne voit rien." }));
+        bouton, erreur, el("p", { class: "p-login-note", text: "Sans cette clé, personne ne voit rien." }));
       mdp.id = "mdp-prof";
       zone.appendChild(el("div", { class: "p-login" }, panneauAccueil(), el("div", { class: "p-login-droite" }, form)));
     }
-    /* À l'ouverture : si le mot de passe est gardé sur cet appareil, on ouvre directement le suivi. */
+    /* À l'ouverture : si la clé du suivi est gardée sur cet appareil, on ouvre directement le suivi. */
     function demarrer() {
       var m = mdpGarde();
       if (!m || !ADRESSE) { ecranConnexion(); return; }
@@ -485,7 +528,7 @@
       zone.appendChild(el("div", { class: "p-login" }, panneauAccueil(), el("div", { class: "p-login-droite" }, el("div", { class: "p-login-carte" }, el("h2", { text: "Bon retour !" }), info))));
       charger(m, function (t) { info.textContent = t; }, function (msg, raison) {
         if (!msg) { return; }
-        if (raison === "mdp") { garderMdp(""); ecranConnexion("Le mot de passe a changé : entre le nouveau, une seule fois."); }
+        if (raison === "mdp") { garderMdp(""); ecranConnexion("La clé du suivi a changé : entre la nouvelle, une seule fois."); }
         else { ecranConnexion(msg); }
       });
     }
@@ -727,7 +770,7 @@
       (c.jeux || []).forEach(function (j) { sectionJeu(j.id, j.titre).forEach(function (n) { page.appendChild(n); }); });
     }
 
-    /* Noms : seulement si ni la feuille Google ni un fichier ne les donnent */
+    /* Noms : tant que le fichier des noms n'a pas été ouvert dans ce navigateur */
     function blocNoms() {
       var fichier = el("input", { type: "file", accept: ".csv,text/csv", onchange: function () {
         var f = fichier.files[0]; if (!f) { return; }
@@ -744,7 +787,7 @@
         });
       } });
       return el("div", { class: "p-vide", style: "margin-bottom:26px" },
-        el("p", { text: "Les noms des élèves ne sont pas arrivés de votre feuille Google (colonne C de l’onglet « Codes »). Vous pouvez aussi ouvrir votre fichier eleves-codes.csv : il reste dans ce navigateur." }),
+        el("p", { text: "Les noms des élèves ne sont jamais mis en ligne. Pour les voir ici, ouvrez une fois votre fichier eleves-codes.csv sur cet appareil : il reste seulement dans ce navigateur." }),
         el("label", null, "Fichier des noms : ", fichier));
     }
 
